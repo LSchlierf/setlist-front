@@ -1,0 +1,66 @@
+table {
+    margin: 30px;
+}
+
+table, th, td {
+    padding: 10px;
+    border: 1px solid black;
+    border-collapse: collapse;
+}
+
+th {
+    border-bottom: 3px solid black;
+}
+
+.button {
+    padding: 10px;
+    text-decoration: underline;
+    cursor: pointer;
+    width: fit-content;
+}
+
+.time {
+    width: 40px;
+}
+
+.info {
+    padding: 10px;
+    /* white-space: pre-line; */
+}
+
+#dialog {
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    top: 30vh;
+}
+
+#dialog > * {
+    margin: 10px;
+}
+
+.newCategoryType {
+    display: flex;
+    flex-direction: column;
+}
+
+.dialogAction {
+    display: flex;
+    justify-content: end;
+}
+
+.category {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.catColorSingle {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+}
+
+.catColorSingle > input {
+    margin-left: 20px;
+}
