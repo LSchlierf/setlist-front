@@ -22,6 +22,10 @@ class storage {
         return {}
     }
 
+    static getSetlist(id) {
+        return this.getSetlists()[id]
+    }
+
     static addSetlist(setlist) {
         let savedSetlists = JSON.parse(localStorage.getItem(this.LOCAL_STORAGE_KEY_SETLISTS))
         const id = uuidv4()
@@ -35,13 +39,15 @@ class storage {
         let savedSetlists = JSON.parse(localStorage.getItem(this.LOCAL_STORAGE_KEY_SETLISTS))
         if (!savedSetlists) savedSetlists = {}
         savedSetlists[id] = setlist
-        localStorage.setItem(this.LOCAL_STORAGE_KEY_SETLISTS, savedSetlists)
+        localStorage.setItem(this.LOCAL_STORAGE_KEY_SETLISTS, JSON.stringify(savedSetlists))
+        return setlist
     }
 
     static deleteSetlist(id) {
         let savedSetlists = JSON.parse(localStorage.getItem(this.LOCAL_STORAGE_KEY_SETLISTS))
         delete savedSetlists[id]
         localStorage.setItem(this.LOCAL_STORAGE_KEY_SETLISTS, JSON.stringify(savedSetlists))
+        return  savedSetlists
     }
 
     static clearSetlists() {

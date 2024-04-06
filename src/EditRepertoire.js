@@ -7,6 +7,8 @@ import storage from './storage'
 import { v4 as uuidv4 } from 'uuid'
 import { useNavigate } from 'react-router-dom'
 
+import { byName, byArtist, byLength, byCat } from './songSort'
+
 export default function EditRepertoire(props) {
   const [repertoire, setRepertoire] = useState(storage.getRepertoire())
   const [dialog, setDialog] = useState(<></>)
@@ -460,58 +462,28 @@ export default function EditRepertoire(props) {
   function sortByName(asc) {
     setRepertoire(storage.saveRepertoire({
       ...repertoire,
-      songs: repertoire.songs.sort((s1, s2) => {
-        if (s1.title === s2.title) {
-          return 0;
-        }
-        return (asc === (1 === s1.title.localeCompare(s2.title))) ? 1 : -1
-      })
+      songs: byName(repertoire.songs, asc)
     }))
   }
 
   function sortByArtist(asc) {
     setRepertoire(storage.saveRepertoire({
       ...repertoire,
-      songs: repertoire.songs.sort((s1, s2) => {
-        if (s1.artist === s2.artist) {
-          return 0;
-        }
-        return (asc === (1 === s1.artist.localeCompare(s2.artist))) ? 1 : -1
-      })
+      songs: byArtist(repertoire.songs, asc)
     }))
   }
 
   function sortByLength(asc) {
     setRepertoire(storage.saveRepertoire({
       ...repertoire,
-      songs: repertoire.songs.sort((s1, s2) => {
-        return asc ? s1.length - s2.length : s2.length - s1.length
-      })
+      songs: byLength(repertoire.songs, asc)
     }))
   }
 
   function sortByCat(asc, id) {
     setRepertoire(storage.saveRepertoire({
       ...repertoire,
-      songs: repertoire.songs.sort((s1, s2) => {
-        let p1, p2
-        switch (repertoire.categories.find((c) => c.id === id).type) {
-          case 'bool':
-            p1 = Boolean(s1.properties[id] || false)
-            p2 = Boolean(s2.properties[id] || false)
-            return p1 === p2 ? 0 : (p1 === asc ? 1 : -1)
-          case 'number':
-            p1 = Number(s1.properties[id] || 0)
-            p2 = Number(s2.properties[id] || 0)
-            return asc ? p1 - p2 : p2 - p1
-          case 'string':
-            p1 = String(s1.properties[id] || '')
-            p2 = String(s2.properties[id] || '')
-            return asc ? p1.localeCompare(p2) : p2.localeCompare(p1)
-          default:
-            return 0
-        }
-      })
+      songs: byCat(repertoire.songs, asc, repertoire.categories.find((c) => c.id === id))
     }))
   }
 

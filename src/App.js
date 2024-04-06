@@ -14,11 +14,11 @@ function App() {
   }
 
   function editSetlist(id) {
-    return () => navigate('editConcert', { state: id })
+    return () => navigate('editSetlist', { state: id })
   }
 
   function newSetlist() {
-    let id = storage.addSetlist({ concert: '', sets: [], encore: [], repertoire: storage.getRepertoire() })
+    let id = storage.addSetlist({ concert: 'new setlist', sets: [], encore: [] })
     setSetlists(storage.getSetlists())
     editSetlist(id)()
   }
@@ -34,8 +34,15 @@ function App() {
   function setlistContainer(id) {
     const setlist = setlists[id]
     return (
-      <div className='container' key={setlist.concert} onClick={editSetlist(id)}>
-        🖉 Edit {setlist.concert}
+      <div className='container' key={setlist.concert}>
+        <div className='flexRow'>
+          <div className='button' onClick={editSetlist(id)}>
+            🖉 Edit {setlist.concert}
+          </div>
+          <div className='button' onClick={() => setSetlists(storage.deleteSetlist(id))}>
+            🗑 Delete setlist
+          </div>
+        </div>
       </div>
     )
   }
@@ -51,10 +58,11 @@ function App() {
       <Header title='Setlist tool' />
       {repertoireContainer()}
       {separator()}
-      <div className='container' onClick={newSetlist}>
-        + New Setlist
-      </div>
       {Object.keys(setlists).map(setlistContainer)}
+      {separator()}
+      <div className='container' onClick={newSetlist}>
+        + Create new setlist
+      </div>
       {/* {JSON.stringify(Object.keys(setlists).map((k) => ({ id: k, concert: setlists[k].concert, sets: setlists[k].sets, encore: setlists[k].encore })))} but as map actually */}
     </>
   );

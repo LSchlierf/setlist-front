@@ -5,3 +5,9 @@
     font-size: x-large;
     box-sizing: border-box;
 }
+
+.flexRow {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+}

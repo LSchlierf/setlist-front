@@ -1,0 +1,65 @@
+.pageContainer {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.repertoireBank {
+    position: relative;
+    /* bottom: 0 !important; */
+    min-height: 30vh;
+    height: 30vh;
+    max-height: 30vh;
+    /* flex: 1; */
+    width: 100vw;
+    overflow-x: scroll;
+    background-color: rgb(30, 30, 30);
+}
+
+.setlistBank {
+    flex: auto;
+    position: relative;
+    /* top: 0; */
+    overflow: scroll;
+}
+
+.newSet {
+    padding: 20px;
+    margin: 20px;
+    width: fit-content;
+    font-size: x-large;
+    border: 1px solid white;
+    border-radius: 10px;
+}
+
+.singleSet {
+    border: 1px solid white;
+    width: fit-content;
+    margin: 20px;
+    border-radius: 10px;
+}
+
+.singleSet > table {
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
+.singleSetHead {
+    padding: 20px 30px 10px;
+    font-size: x-large;
+    font-weight: bold;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.singleSetFoot {
+    padding: 15px 30px 20px;
+    font-weight: bold;
+}
+
+#concertTitle {
+    margin: 20px 20px 0;
+    font-size: xx-large;
+    padding: 5px;
+}
