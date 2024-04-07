@@ -104,6 +104,7 @@ export default function EditSetlist() {
         let from = e.dataTransfer.getData('from')
         let newSets = setlist.sets
         let song = fullRepertoire.songs.find((s) => s.id === songID)
+        let newEncore = setlist.encore
         if (from === 'repertoire') {
           setRepertoire({
             ...repertoire,
@@ -112,6 +113,8 @@ export default function EditSetlist() {
         } else if (from.startsWith('set-')) {
           let setIndex = Number(from.substring(4))
           newSets = [...newSets.slice(0, setIndex), newSets[setIndex].filter((s) => s.id !== songID), ...newSets.slice(setIndex + 1)]
+        } else if (from === 'encore') {
+          newEncore = newEncore.filter((s) => s.id !== songID)
         }
         let newSet = set.filter((s) => s.id !== songID)
         let y = e.clientY
@@ -138,7 +141,8 @@ export default function EditSetlist() {
         }
         setSetlist(storage.updateSetlist(id, {
           ...setlist,
-          sets: newSets
+          sets: newSets,
+          encore: newEncore
         }))
       }}>
         <div className='singleSetHead'>
@@ -149,10 +153,10 @@ export default function EditSetlist() {
               ...repertoire,
               songs: [...repertoire.songs, ...set]
             }
-            setSetlist({
+            setSetlist(storage.updateSetlist(id, {
               ...setlist,
               sets: newSets
-            })
+            }))
             lastSort.func(lastSort.asc, newRep, lastSort.cat)
           }}>
             ✘ Delete set
@@ -167,7 +171,7 @@ export default function EditSetlist() {
               Artist
             </th>
             <th>
-              length
+              Length
             </th>
             {repertoire.categories.map((c) =>
               <th>
@@ -193,10 +197,10 @@ export default function EditSetlist() {
         <input id='concertTitle' type='text' defaultValue={setlist.concert} onInput={() => {
           const input = document.getElementById('concertTitle')
           setSetlist(storage.updateSetlist(id, {
-            ...setlist, 
+            ...setlist,
             concert: input.value
           }))
-        }}/>
+        }} />
         {setlist.sets.map(setDisplay)}
         <div className='newSet' onDragOver={(e) => e.preventDefault()} onDrop={(e) => {
           const songID = e.dataTransfer.getData('id')
@@ -221,13 +225,88 @@ export default function EditSetlist() {
         }}>
           + Drag a song here to add a set
         </div>
+        <div className='singleSet' onDragOver={(e) => e.preventDefault()} onDrop={(e) => {
+          e.preventDefault()
+          const songID = e.dataTransfer.getData('id')
+          const from = e.dataTransfer.getData('from')
+          console.log(songID, from)
+          if (from === 'encore') {
+            return
+          }
+          const song = fullRepertoire.songs.find((s) => s.id === songID)
+          let newSets = setlist.sets
+          if (from === 'repertoire') {
+            setRepertoire({
+              ...repertoire,
+              songs: repertoire.songs.filter((s) => s.id !== songID)
+            })
+          } else if (from.startsWith('set-')) {
+            const setIndex = Number(from.substring(4))
+            newSets = [...newSets.slice(0, setIndex), newSets[setIndex].filter((s) => s.id !== songID), ...newSets.slice(setIndex + 1)]
+          }
+          const songs = document.getElementsByClassName('encore')
+          const y = e.clientY
+          let newEncore = setlist.encore
+          if (songs.length === 0 || y < songs[0].getBoundingClientRect().top) {
+            newEncore = [song, ...newEncore]
+          } else if (y > songs[songs.length - 1].getBoundingClientRect().bottom) {
+            newEncore = [...newEncore, song]
+          } else {
+            for (let i = 0; i < songs.length; i++) {
+              let top = songs[i].getBoundingClientRect().top
+              let bottom = songs[i].getBoundingClientRect().bottom
+              if (y >= top && y <= bottom) {
+                if (y - top < bottom - y) {
+                  newEncore = [...newEncore.slice(0, i), song, ...newEncore.slice(i)]
+                } else {
+                  newEncore = [...newEncore.slice(0, i + 1), song, ...newEncore.slice(i + 1)]
+                }
+              }
+            }
+          }
+          setSetlist(storage.updateSetlist(id, {
+            ...setlist,
+            sets: newSets,
+            encore: newEncore
+          }))
+        }}>
+          <div className='singleSetHead'>
+            Encore
+          </div>
+          <table>
+            <thead>
+              <th>
+                Title
+              </th>
+              <th>
+                Artist
+              </th>
+              <th>
+                Length
+              </th>
+              {repertoire.categories.map((c) =>
+                <th>
+                  {c.title}
+                </th>
+              )}
+            </thead>
+            <tbody>
+              {setlist.encore.map(songRow('encore'))}
+            </tbody>
+          </table>
+          <div className='singleSetFoot'>
+            {setlist.encore.length} Songs, {setLength(setlist.encore)}
+          </div>
+        </div>
+        <div className='button' >
+          Export setlist
+        </div>
         {/* {JSON.stringify(setlist)} */}
       </div>
       <div className='repertoireBank' onDragOver={(e) => e.preventDefault()} onDrop={(e) => {
         e.preventDefault()
         const songID = e.dataTransfer.getData('id')
         const from = e.dataTransfer.getData('from')
-        console.log(songID, from)
         if (from === 'repertoire') {
           return
         }
@@ -237,40 +316,53 @@ export default function EditSetlist() {
             ...setlist,
             sets: [...setlist.sets.slice(0, setIndex), setlist.sets[setIndex].filter((s) => s.id !== songID), ...setlist.sets.slice(setIndex + 1)]
           }))
-          lastSort.func(lastSort.asc, {
-            ...repertoire,
-            songs: [...repertoire.songs, fullRepertoire.songs.find((s) => s.id === songID)]
-          }, lastSort.cat)
+        } else if (from === 'encore') {
+          setSetlist(storage.updateSetlist(id, {
+            ...setlist,
+            encore: setlist.encore.filter((s) => s.id !== songID)
+          }))
         }
+        lastSort.func(lastSort.asc, {
+          ...repertoire,
+          songs: [...repertoire.songs, fullRepertoire.songs.find((s) => s.id === songID)]
+        }, lastSort.cat)
       }}>
         <table>
           <thead>
             <th>
-              <div className='category' >
+              <div className='repCategory' >
                 Song title
-                <div className='button' onClick={() => sortByName(true, repertoire)}>˄</div>
-                <div className='button' onClick={() => sortByName(false, repertoire)}>˅</div>
+                <div className='categoryAction'>
+                  <div className='button' onClick={() => sortByName(true, repertoire)}>˄</div>
+                  <div className='button' onClick={() => sortByName(false, repertoire)}>˅</div>
+                </div>
               </div>
             </th>
             <th>
-              <div className='category'>
+              <div className='repCategory'>
                 Artist
-                <div className='button' onClick={() => sortByArtist(true, repertoire)}>˄</div>
-                <div className='button' onClick={() => sortByArtist(false, repertoire)}>˅</div>
+                <div className='categoryAction'>
+                  <div className='button' onClick={() => sortByArtist(true, repertoire)}>˄</div>
+                  <div className='button' onClick={() => sortByArtist(false, repertoire)}>˅</div>
+                </div>
               </div>
             </th>
             <th>
-              <div className='category'>
+              <div className='repCategory'>
                 Length
-                <div className='button' onClick={() => sortByLength(true, repertoire)}>˄</div>
-                <div className='button' onClick={() => sortByLength(false, repertoire)}>˅</div>
+                <div className='categoryAction'>
+                  <div className='button' onClick={() => sortByLength(true, repertoire)}>˄</div>
+                  <div className='button' onClick={() => sortByLength(false, repertoire)}>˅</div>
+                </div>
               </div>
             </th>
             {repertoire.categories.map((c) => <th>
-              <div className='category'>
+              <div className='repCategory'>
                 {c.title}
-                <div className='button' onClick={() => sortByCat(true, repertoire, c)}>˄</div>
-                <div className='button' onClick={() => sortByCat(false, repertoire, c)}>˅</div>
+                <div className='categoryAction'>
+                  <div className='button' onClick={() => sortByCat(true, repertoire, c)}>˄</div>
+                  <div className='button' onClick={() => sortByCat(false, repertoire, c)}>˅</div>
+                </div>
               </div>
             </th>)}
           </thead>
