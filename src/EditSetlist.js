@@ -6,11 +6,13 @@ import storage from './storage'
 import Header from './Header'
 import { byName, byArtist, byLength, byCat } from './songSort'
 import { downloadFile } from './util'
+import { PDFDownloadLink } from '@react-pdf/renderer'
+import SetlistSinglePDF from './SetlistSinglePDF'
 
 export default function EditSetlist() {
   let fullRepertoire = storage.getRepertoire()
   const [dialog, setDialog] = useState(<></>)
-
+  
   function updateSetlist(setlist) {
     return {
       ...setlist,
@@ -18,7 +20,7 @@ export default function EditSetlist() {
       encore: setlist.encore.map((song) => fullRepertoire.songs.find((s) => s.id === song.id))
     }
   }
-
+  
   let { state } = useLocation()
   let navigate = useNavigate()
   const id = state
@@ -105,7 +107,7 @@ export default function EditSetlist() {
 
   function setLength(set) {
     let sum = set.reduce((a, s) => a + s.length, 0)
-    return Math.floor(sum / 60) + 'm ' + (sum % 60) + 's'
+    return Math.floor(sum / 3600) + 'h ' + (Math.floor(sum / 60) % 60) + 'm ' + (sum % 60) + 's'
   }
 
   function setDisplay(set, index) {
@@ -310,6 +312,34 @@ export default function EditSetlist() {
             {setlist.encore.length} Songs, {setLength(setlist.encore)}
           </div>
         </div>
+        <div className='info'>
+          Total songs: {[...setlist.encore, ...setlist.sets.flat()].length}
+          <br />
+          Total length (without breaks): {setLength([...setlist.encore, ...setlist.sets.flat()])}
+          <br />
+          <input id='breaksNum' type='number' defaultValue={setlist.breaks?.num} min={0} style={{width: 50}} onInput={() => {
+            const input = document.getElementById('breaksNum')
+            setSetlist(storage.updateSetlist(id, {
+              ...setlist,
+              breaks: {
+                ...setlist.breaks,
+                num: Number(input.value)
+              }
+            }))
+          }}/> breaks, 
+          <input id='breaksLen' type='number' defaultValue={setlist.breaks?.len} min={0} max={60} style={{width: 50}} onInput={() => {
+            const input = document.getElementById('breaksLen')
+            setSetlist(storage.updateSetlist(id, {
+              ...setlist,
+              breaks: {
+                ...setlist.breaks,
+                len: Number(input.value)
+              }
+            }))
+          }}/> minutes each
+          <br/>
+          Total length (with breaks): {setLength([...setlist.encore, ...setlist.sets.flat(), {length: (setlist.breaks.len * setlist.breaks.num * 60)}])}
+        </div>
         <div className='button' onClick={() => {
           setDialog(
             <dialog open id='dialog'>
@@ -323,9 +353,18 @@ export default function EditSetlist() {
                   fileName: 'Setlist  ' + setlist.concert + '.json',
                   fileType: 'text/json'
                 })
+                setDialog(<></>)
               }}>
                 Download JSON
               </button>
+              <br />
+              Export to PDF file:
+              <br />
+              <PDFDownloadLink document={<SetlistSinglePDF setlist={setlist} />} fileName={'Setlist ' + setlist.concert + '.pdf'}>
+                {({ blob, url, loading, error }) =>
+                  loading ? 'Preparing...' : 'Download'
+                }
+              </PDFDownloadLink>
               <div className='dialogAction'>
                 <button type='button' onClick={() => {
                   setDialog(<></>)
@@ -411,3 +450,5 @@ export default function EditSetlist() {
     </div>
   )
 }
+
+// anfangszeit -> endzeit
