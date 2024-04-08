@@ -33,6 +33,7 @@ th {
     flex-direction: column;
     position: fixed;
     top: 30vh;
+    z-index: 3;
 }
 
 #dialog > * {

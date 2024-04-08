@@ -8,6 +8,7 @@ import { v4 as uuidv4 } from 'uuid'
 import { useNavigate } from 'react-router-dom'
 
 import { byName, byArtist, byLength, byCat } from './songSort'
+import { downloadFile } from './util'
 
 export default function EditRepertoire(props) {
   const [repertoire, setRepertoire] = useState(storage.getRepertoire())
@@ -319,20 +320,6 @@ export default function EditRepertoire(props) {
     return Math.floor(sum / 3600) + 'h, ' + (Math.floor(sum / 60) % 60) + 'm, ' + (sum % 60) + 's'
   }
 
-  function downloadFile({ data, fileName, fileType }) {
-    const blob = new Blob([data], { type: fileType })
-    const a = document.createElement('a')
-    a.download = fileName
-    a.href = window.URL.createObjectURL(blob)
-    const clickEvt = new MouseEvent('click', {
-      view: window,
-      bubbles: true,
-      cancelable: true,
-    })
-    a.dispatchEvent(clickEvt)
-    a.remove()
-  }
-
   function downloadJSON() {
     downloadFile({
       data: JSON.stringify(repertoire, null, 2),
@@ -365,15 +352,29 @@ export default function EditRepertoire(props) {
           var reader = new FileReader()
 
           reader.onload = (e) => {
-            setRepertoire(storage.saveRepertoire(JSON.parse(e.target.result)))
+            let newRepertoire = JSON.parse(e.target.result)
+            if (newRepertoire === undefined || newRepertoire.categories === undefined || newRepertoire.songs === undefined) {
+              setDialog(
+                <dialog id='dialog' open >
+                  <u>Invalid repertoire</u>
+                  <div className='dialogAction'>
+                    <button type='button' onClick={() => setDialog(<></>)}>
+                      Close
+                    </button>
+                  </div>
+                </dialog>
+              )
+              return
+            }
+            setRepertoire(storage.saveRepertoire(newRepertoire))
             setDialog(<></>)
           }
 
-          if (input.isDefaultNamespace.length > 0) {
+          if (input.files.length > 0) {
             reader.readAsText(input.files[0])
           }
-        }}></input>
-        <br />
+        }} />
+        < br />
         <br />
         Export to JSON file:
         <br />
@@ -393,7 +394,7 @@ export default function EditRepertoire(props) {
             Close
           </button>
         </div>
-      </dialog>
+      </dialog >
     )
   }
 

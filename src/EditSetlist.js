@@ -5,13 +5,24 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import storage from './storage'
 import Header from './Header'
 import { byName, byArtist, byLength, byCat } from './songSort'
+import { downloadFile } from './util'
 
 export default function EditSetlist() {
+  let fullRepertoire = storage.getRepertoire()
+  const [dialog, setDialog] = useState(<></>)
+
+  function updateSetlist(setlist) {
+    return {
+      ...setlist,
+      sets: setlist.sets.map((set) => set.map((song) => fullRepertoire.songs.find((s) => s.id === song.id))),
+      encore: setlist.encore.map((song) => fullRepertoire.songs.find((s) => s.id === song.id))
+    }
+  }
+
   let { state } = useLocation()
   let navigate = useNavigate()
   const id = state
-  const [setlist, setSetlist] = useState(storage.getSetlist(id))
-  let fullRepertoire = storage.getRepertoire()
+  const [setlist, setSetlist] = useState(storage.updateSetlist(id, updateSetlist(storage.getSetlist(id))))
   const [repertoire, setRepertoire] = useState({
     ...fullRepertoire,
     songs: fullRepertoire.songs.filter((s) => ([...setlist.sets.flat(), ...setlist.encore].find((t) => t?.id === s.id) === undefined))
@@ -193,6 +204,7 @@ export default function EditSetlist() {
   return (
     <div className='pageContainer'>
       <Header title='Edit setlist' leftButton={leftButton} />
+      {dialog}
       <div className='setlistBank'>
         <input id='concertTitle' type='text' defaultValue={setlist.concert} onInput={() => {
           const input = document.getElementById('concertTitle')
@@ -298,7 +310,32 @@ export default function EditSetlist() {
             {setlist.encore.length} Songs, {setLength(setlist.encore)}
           </div>
         </div>
-        <div className='button' >
+        <div className='button' onClick={() => {
+          setDialog(
+            <dialog open id='dialog'>
+              <u>Export setlist</u>
+              <br />
+              Export to JSON file:
+              <br />
+              <button type='button' onClick={() => {
+                downloadFile({
+                  data: JSON.stringify(setlist, null, 2),
+                  fileName: 'Setlist  ' + setlist.concert + '.json',
+                  fileType: 'text/json'
+                })
+              }}>
+                Download JSON
+              </button>
+              <div className='dialogAction'>
+                <button type='button' onClick={() => {
+                  setDialog(<></>)
+                }}>
+                  Close
+                </button>
+              </div>
+            </dialog>
+          )
+        }} >
           Export setlist
         </div>
         {/* {JSON.stringify(setlist)} */}
