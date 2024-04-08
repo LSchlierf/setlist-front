@@ -195,6 +195,23 @@ export default function EditRepertoire(props) {
     }))
   }
 
+  function updateNotes(id) {
+    const notes = document.getElementById(id + '-notes').value
+
+    setRepertoire(storage.saveRepertoire({
+      ...repertoire,
+      songs: repertoire.songs.map((song) => {
+        if (song.id === id) {
+          return {
+            ...song,
+            notes: notes
+          }
+        }
+        return song
+      })
+    }))
+  }
+
   function updateTime(id) {
     let min = document.getElementById(id + '-min')
     let sec = document.getElementById(id + '-sec')
@@ -306,6 +323,9 @@ export default function EditRepertoire(props) {
             {catSelector(c, song)}
           </td>
         })}
+        <td>
+          <input id={song.id + '-notes'} type='text' placeholder='Notes' defaultValue={song.notes} onChange={() => updateNotes(song.id)} />
+        </td>
         <td className='button' onClick={
           () => setRepertoire(storage.saveRepertoire({ ...repertoire, songs: repertoire.songs.filter(({ id }) => id !== song.id) }))
         }>
@@ -532,28 +552,28 @@ export default function EditRepertoire(props) {
               }
             }
           }}>
-            <th>
+            <td>
               <div className='category' >
                 Song title
                 <div className='button' onClick={() => sortByName(true)}>˄</div>
                 <div className='button' onClick={() => sortByName(false)}>˅</div>
               </div>
-            </th>
-            <th>
+            </td>
+            <td>
               <div className='category'>
                 Artist
                 <div className='button' onClick={() => sortByArtist(true)}>˄</div>
                 <div className='button' onClick={() => sortByArtist(false)}>˅</div>
               </div>
-            </th>
-            <th>
+            </td>
+            <td>
               <div className='category'>
                 Length
                 <div className='button' onClick={() => sortByLength(true)}>˄</div>
                 <div className='button' onClick={() => sortByLength(false)}>˅</div>
               </div>
-            </th>
-            {repertoire.categories.map((c) => <th draggable='true' id={c.id} key={c.id} onDragStart={(e) => {
+            </td>
+            {repertoire.categories.map((c) => <td draggable='true' id={c.id} key={c.id} onDragStart={(e) => {
               e.dataTransfer.setData('id', c.id)
               e.dataTransfer.setData('type', 'category')
             }}>
@@ -567,10 +587,13 @@ export default function EditRepertoire(props) {
                   ✘
                 </div>
               </div>
-            </th>)}
-            <th className='button' onClick={addCategory}>
+            </td>)}
+            <td>
+              Notes
+            </td>
+            <td className='button' onClick={addCategory}>
               + Add Category
-            </th>
+            </td>
           </tr>
         </thead>
         <tbody onDragOver={(e) => e.preventDefault()} onDrop={(e) => {

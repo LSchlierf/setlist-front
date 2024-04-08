@@ -100,6 +100,9 @@ export default function EditSetlist() {
           }}>
             {catDisplay(song, c)}
           </td>)}
+          <td>
+            {song.notes}
+          </td>
         </tr>
       )
     }
@@ -177,20 +180,23 @@ export default function EditSetlist() {
         </div>
         <table>
           <thead>
-            <th>
+            <td>
               Title
-            </th>
-            <th>
+            </td>
+            <td>
               Artist
-            </th>
-            <th>
+            </td>
+            <td>
               Length
-            </th>
+            </td>
             {repertoire.categories.map((c) =>
-              <th>
+              <td>
                 {c.title}
-              </th>
+              </td>
             )}
+            <td>
+              Notes
+            </td>
           </thead>
           <tbody>
             {set.map(songRow('set-' + index))}
@@ -289,20 +295,23 @@ export default function EditSetlist() {
           </div>
           <table>
             <thead>
-              <th>
+              <td>
                 Title
-              </th>
-              <th>
+              </td>
+              <td>
                 Artist
-              </th>
-              <th>
+              </td>
+              <td>
                 Length
-              </th>
+              </td>
               {repertoire.categories.map((c) =>
-                <th>
+                <td>
                   {c.title}
-                </th>
+                </td>
               )}
+              <td>
+                Notes
+              </td>
             </thead>
             <tbody>
               {setlist.encore.map(songRow('encore'))}
@@ -362,7 +371,7 @@ export default function EditSetlist() {
               <br />
               <PDFDownloadLink document={<SetlistSinglePDF setlist={setlist} />} fileName={'Setlist ' + setlist.concert + '.pdf'}>
                 {({ blob, url, loading, error }) =>
-                  loading ? 'Preparing...' : 'Download'
+                  loading ? 'Preparing...' : 'Download PDF'
                 }
               </PDFDownloadLink>
               <div className='dialogAction'>
@@ -405,7 +414,7 @@ export default function EditSetlist() {
       }}>
         <table>
           <thead>
-            <th>
+            <td>
               <div className='repCategory' >
                 Song title
                 <div className='categoryAction'>
@@ -413,8 +422,8 @@ export default function EditSetlist() {
                   <div className='button' onClick={() => sortByName(false, repertoire)}>˅</div>
                 </div>
               </div>
-            </th>
-            <th>
+            </td>
+            <td>
               <div className='repCategory'>
                 Artist
                 <div className='categoryAction'>
@@ -422,8 +431,8 @@ export default function EditSetlist() {
                   <div className='button' onClick={() => sortByArtist(false, repertoire)}>˅</div>
                 </div>
               </div>
-            </th>
-            <th>
+            </td>
+            <td>
               <div className='repCategory'>
                 Length
                 <div className='categoryAction'>
@@ -431,8 +440,8 @@ export default function EditSetlist() {
                   <div className='button' onClick={() => sortByLength(false, repertoire)}>˅</div>
                 </div>
               </div>
-            </th>
-            {repertoire.categories.map((c) => <th>
+            </td>
+            {repertoire.categories.map((c) => <td>
               <div className='repCategory'>
                 {c.title}
                 <div className='categoryAction'>
@@ -440,7 +449,10 @@ export default function EditSetlist() {
                   <div className='button' onClick={() => sortByCat(false, repertoire, c)}>˅</div>
                 </div>
               </div>
-            </th>)}
+            </td>)}
+            <td>
+              Notes
+            </td>
           </thead>
           <tbody>
             {repertoire.songs.map(songRow('repertoire'))}
