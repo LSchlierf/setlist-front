@@ -347,7 +347,7 @@ export default function EditSetlist() {
             }))
           }}/> minutes each
           <br/>
-          Total length (with breaks): {setLength([...setlist.encore, ...setlist.sets.flat(), {length: (setlist.breaks.len * setlist.breaks.num * 60)}])}
+          Total length (with breaks): {setLength([...setlist.encore, ...setlist.sets.flat(), {length: (setlist.breaks?.len || 0 * setlist.breaks?.num || 0 * 60)}])}
         </div>
         <div className='button' onClick={() => {
           setDialog(

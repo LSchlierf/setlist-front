@@ -19,7 +19,7 @@ function App() {
   }
 
   function newSetlist() {
-    let id = storage.addSetlist({ concert: 'new setlist', sets: [], encore: [] })
+    let id = storage.addSetlist({ concert: 'new setlist', sets: [], encore: [], breaks: { num: 0, len: 15 } })
     setSetlists(storage.getSetlists())
     editSetlist(id)()
   }
@@ -72,9 +72,9 @@ function App() {
           setDialog(
             <dialog id='dialog' open>
               <u>Import setlist</u>
-              <br/>
+              <br />
               Import from JSON file:
-              <br/>
+              <br />
               <input id='setlistFileInput' accept='.json' type='file' onInput={() => {
                 const input = document.getElementById('setlistFileInput')
                 var reader = new FileReader()
@@ -99,10 +99,10 @@ function App() {
                   setDialog(<></>)
                 }
 
-                if(input.files.length > 0) {
+                if (input.files.length > 0) {
                   reader.readAsText(input.files[0])
                 }
-              }}/>
+              }} />
               <div className='dialogAction'>
                 <button type='button' onClick={() => {
                   setDialog(<></>)
