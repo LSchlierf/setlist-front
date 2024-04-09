@@ -171,7 +171,7 @@ function SetlistDetailedPDF(props) {
 
   function setBlock(set, setIndex) {
     return (
-      <View key={setIndex}>
+      <View key={setIndex} wrap={false}>
         <View style={[styles.flexRow, styles.width100, styles.setBlock]}>
           <View style={styles.values}>
             <View style={styles.column}>
