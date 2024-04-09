@@ -85,7 +85,7 @@ export default function EditSetlist() {
     return (song) => {
       let backgroundColor = repertoire.color?.colors[song.properties[repertoire.color?.category]]
       return (
-        <tr className={from + ' ' + song.id} style={{ backgroundColor: backgroundColor, color: backgroundColor ? 'black' : null }} draggable='true' onDragStart={(e) => { e.dataTransfer.setData('id', song.id); e.dataTransfer.setData('from', from) }}>
+        <tr key={song.id} className={from + ' ' + song.id} style={{ backgroundColor: backgroundColor, color: backgroundColor ? 'black' : null }} draggable='true' onDragStart={(e) => { e.dataTransfer.setData('id', song.id); e.dataTransfer.setData('from', from) }}>
           <td>
             {song.title}
           </td>
@@ -95,7 +95,7 @@ export default function EditSetlist() {
           <td>
             {Math.floor(song.length / 60)}m {song.length % 60}s
           </td>
-          {repertoire.categories.map((c) => <td style={{
+          {repertoire.categories.map((c) => <td key={c.id} style={{
             backgroundColor: c.type === 'bool' ? (song.properties[c.id] ? 'green' : 'red') : null
           }}>
             {catDisplay(song, c)}
@@ -120,7 +120,7 @@ export default function EditSetlist() {
 
   function setDisplay(set, index) {
     return (
-      <div className='singleSet' onDragOver={(e) => e.preventDefault()} onDrop={(e) => {
+      <div key={index} className='singleSet' onDragOver={(e) => e.preventDefault()} onDrop={(e) => {
         let songID = e.dataTransfer.getData('id')
         let from = e.dataTransfer.getData('from')
         let newSets = setlist.sets
@@ -185,23 +185,25 @@ export default function EditSetlist() {
         </div>
         <table>
           <thead>
-            <td>
-              Title
-            </td>
-            <td>
-              Artist
-            </td>
-            <td>
-              Length
-            </td>
-            {repertoire.categories.map((c) =>
-              <td>
-                {c.title}
-              </td>
-            )}
-            <td>
-              Notes
-            </td>
+            <tr>
+              <th>
+                Title
+              </th>
+              <th>
+                Artist
+              </th>
+              <th>
+                Length
+              </th>
+              {repertoire.categories.map((c) =>
+                <th key={c.id}>
+                  {c.title}
+                </th>
+              )}
+              <th>
+                Notes
+              </th>
+            </tr>
           </thead>
           <tbody>
             {set.map(songRow('set-' + index))}
@@ -299,23 +301,25 @@ export default function EditSetlist() {
           </div>
           <table>
             <thead>
-              <td>
-                Title
-              </td>
-              <td>
-                Artist
-              </td>
-              <td>
-                Length
-              </td>
-              {repertoire.categories.map((c) =>
-                <td>
-                  {c.title}
-                </td>
-              )}
-              <td>
-                Notes
-              </td>
+              <tr>
+                <th>
+                  Title
+                </th>
+                <th>
+                  Artist
+                </th>
+                <th>
+                  Length
+                </th>
+                {repertoire.categories.map((c) =>
+                  <th key={c.id}>
+                    {c.title}
+                  </th>
+                )}
+                <th>
+                  Notes
+                </th>
+              </tr>
             </thead>
             <tbody>
               {setlist.encore.map(songRow('encore'))}
@@ -454,45 +458,47 @@ export default function EditSetlist() {
       }}>
         <table>
           <thead>
-            <td>
-              <div className='repCategory' >
-                Song title
-                <div className='categoryAction'>
-                  <div className='button' onClick={() => sortByName(true, repertoire)}>˄</div>
-                  <div className='button' onClick={() => sortByName(false, repertoire)}>˅</div>
+            <tr>
+              <th>
+                <div className='repCategory' >
+                  Song title
+                  <div className='categoryAction'>
+                    <div className='button' onClick={() => sortByName(true, repertoire)}>˄</div>
+                    <div className='button' onClick={() => sortByName(false, repertoire)}>˅</div>
+                  </div>
                 </div>
-              </div>
-            </td>
-            <td>
-              <div className='repCategory'>
-                Artist
-                <div className='categoryAction'>
-                  <div className='button' onClick={() => sortByArtist(true, repertoire)}>˄</div>
-                  <div className='button' onClick={() => sortByArtist(false, repertoire)}>˅</div>
+              </th>
+              <th>
+                <div className='repCategory'>
+                  Artist
+                  <div className='categoryAction'>
+                    <div className='button' onClick={() => sortByArtist(true, repertoire)}>˄</div>
+                    <div className='button' onClick={() => sortByArtist(false, repertoire)}>˅</div>
+                  </div>
                 </div>
-              </div>
-            </td>
-            <td>
-              <div className='repCategory'>
-                Length
-                <div className='categoryAction'>
-                  <div className='button' onClick={() => sortByLength(true, repertoire)}>˄</div>
-                  <div className='button' onClick={() => sortByLength(false, repertoire)}>˅</div>
+              </th>
+              <th>
+                <div className='repCategory'>
+                  Length
+                  <div className='categoryAction'>
+                    <div className='button' onClick={() => sortByLength(true, repertoire)}>˄</div>
+                    <div className='button' onClick={() => sortByLength(false, repertoire)}>˅</div>
+                  </div>
                 </div>
-              </div>
-            </td>
-            {repertoire.categories.map((c) => <td>
-              <div className='repCategory'>
-                {c.title}
-                <div className='categoryAction'>
-                  <div className='button' onClick={() => sortByCat(true, repertoire, c)}>˄</div>
-                  <div className='button' onClick={() => sortByCat(false, repertoire, c)}>˅</div>
+              </th>
+              {repertoire.categories.map((c) => <th key={c.id}>
+                <div className='repCategory'>
+                  {c.title}
+                  <div className='categoryAction'>
+                    <div className='button' onClick={() => sortByCat(true, repertoire, c)}>˄</div>
+                    <div className='button' onClick={() => sortByCat(false, repertoire, c)}>˅</div>
+                  </div>
                 </div>
-              </div>
-            </td>)}
-            <td>
-              Notes
-            </td>
+              </th>)}
+              <th>
+                Notes
+              </th>
+            </tr>
           </thead>
           <tbody>
             {repertoire.songs.map(songRow('repertoire'))}

@@ -278,7 +278,7 @@ export default function EditRepertoire(props) {
             }))
           }}>
             <option value=''>Select</option>
-            {cat.valueRange.map((val) => <option value={val}>{val}</option>)}
+            {cat.valueRange.map((val) => <option key={val} value={val}>{val}</option>)}
           </select>
         )
       case 'number':
@@ -552,28 +552,28 @@ export default function EditRepertoire(props) {
               }
             }
           }}>
-            <td>
+            <th>
               <div className='category' >
                 Song title
                 <div className='button' onClick={() => sortByName(true)}>˄</div>
                 <div className='button' onClick={() => sortByName(false)}>˅</div>
               </div>
-            </td>
-            <td>
+            </th>
+            <th>
               <div className='category'>
                 Artist
                 <div className='button' onClick={() => sortByArtist(true)}>˄</div>
                 <div className='button' onClick={() => sortByArtist(false)}>˅</div>
               </div>
-            </td>
-            <td>
+            </th>
+            <th>
               <div className='category'>
                 Length
                 <div className='button' onClick={() => sortByLength(true)}>˄</div>
                 <div className='button' onClick={() => sortByLength(false)}>˅</div>
               </div>
-            </td>
-            {repertoire.categories.map((c) => <td draggable='true' id={c.id} key={c.id} onDragStart={(e) => {
+            </th>
+            {repertoire.categories.map((c) => <th draggable='true' id={c.id} key={c.id} onDragStart={(e) => {
               e.dataTransfer.setData('id', c.id)
               e.dataTransfer.setData('type', 'category')
             }}>
@@ -587,13 +587,13 @@ export default function EditRepertoire(props) {
                   ✘
                 </div>
               </div>
-            </td>)}
-            <td>
+            </th>)}
+            <th>
               Notes
-            </td>
-            <td className='button' onClick={addCategory}>
+            </th>
+            <th className='button' onClick={addCategory}>
               + Add Category
-            </td>
+            </th>
           </tr>
         </thead>
         <tbody onDragOver={(e) => e.preventDefault()} onDrop={(e) => {
