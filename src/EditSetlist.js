@@ -12,7 +12,7 @@ import SetlistSinglePDF from './SetlistSinglePDF'
 export default function EditSetlist() {
   let fullRepertoire = storage.getRepertoire()
   const [dialog, setDialog] = useState(<></>)
-  
+
   function updateSetlist(setlist) {
     return {
       ...setlist,
@@ -20,7 +20,7 @@ export default function EditSetlist() {
       encore: setlist.encore.map((song) => fullRepertoire.songs.find((s) => s.id === song.id))
     }
   }
-  
+
   let { state } = useLocation()
   let navigate = useNavigate()
   const id = state
@@ -111,6 +111,11 @@ export default function EditSetlist() {
   function setLength(set) {
     let sum = set.reduce((a, s) => a + s.length, 0)
     return Math.floor(sum / 3600) + 'h ' + (Math.floor(sum / 60) % 60) + 'm ' + (sum % 60) + 's'
+  }
+
+  function concertDurationMinutes(breaks) {
+    let sum = [...setlist.encore, ...setlist.sets.flat()].reduce((a, s) => a + s.length, 0) + (breaks * 60)
+    return Math.ceil(sum / 60)
   }
 
   function setDisplay(set, index) {
@@ -249,7 +254,6 @@ export default function EditSetlist() {
           e.preventDefault()
           const songID = e.dataTransfer.getData('id')
           const from = e.dataTransfer.getData('from')
-          console.log(songID, from)
           if (from === 'encore') {
             return
           }
@@ -326,7 +330,7 @@ export default function EditSetlist() {
           <br />
           Total length (without breaks): {setLength([...setlist.encore, ...setlist.sets.flat()])}
           <br />
-          <input id='breaksNum' type='number' defaultValue={setlist.breaks?.num} min={0} style={{width: 50}} onInput={() => {
+          <input id='breaksNum' type='number' defaultValue={setlist.breaks?.num} min={0} style={{ width: 50 }} onInput={() => {
             const input = document.getElementById('breaksNum')
             setSetlist(storage.updateSetlist(id, {
               ...setlist,
@@ -335,8 +339,8 @@ export default function EditSetlist() {
                 num: Number(input.value)
               }
             }))
-          }}/> breaks, 
-          <input id='breaksLen' type='number' defaultValue={setlist.breaks?.len} min={0} max={60} style={{width: 50}} onInput={() => {
+          }} /> breaks,
+          <input id='breaksLen' type='number' defaultValue={setlist.breaks?.len} min={0} max={60} style={{ width: 50 }} onInput={() => {
             const input = document.getElementById('breaksLen')
             setSetlist(storage.updateSetlist(id, {
               ...setlist,
@@ -345,9 +349,45 @@ export default function EditSetlist() {
                 len: Number(input.value)
               }
             }))
-          }}/> minutes each
-          <br/>
-          Total length (with breaks): {setLength([...setlist.encore, ...setlist.sets.flat(), {length: ((setlist.breaks?.len || 0) * (setlist.breaks?.num || 0) * 60)}])}
+          }} /> minutes each
+          <br />
+          Total length (with breaks): {setLength([...setlist.encore, ...setlist.sets.flat(), { length: ((setlist.breaks?.len || 0) * (setlist.breaks?.num || 0) * 60) }])}
+          <br />
+          Start time: <input defaultValue={setlist.startTime || '19:30'} id='startTime' type='time' onInput={() => {
+            const start = document.getElementById('startTime')
+            const startH = Number(start.value.split(':')[0])
+            const startM = Number(start.value.split(':')[1])
+            const end = document.getElementById('endTime')
+            const minutes = concertDurationMinutes((setlist.breaks?.len || 0) * (setlist.breaks?.num || 0))
+            const endMinutes = ((startH * 60) + startM + minutes) % 1440
+            setSetlist(storage.updateSetlist(id, {
+              ...setlist,
+              startTime: start.value
+            }))
+            end.value = ('0' + (Math.floor(endMinutes / 60))).slice(-2) + ':' + ('0' + (endMinutes % 60)).slice(-2)
+          }} />, End time: <input id='endTime' type='time' onInput={() => {
+            const start = document.getElementById('startTime')
+            const end = document.getElementById('endTime')
+            const endH = Number(end.value.split(':')[0])
+            const endM = Number(end.value.split(':')[1])
+            const minutes = concertDurationMinutes((setlist.breaks?.len || 0) * (setlist.breaks?.num || 0))
+            const startMinutes = ((((endH * 60) + endM) + 1440) - minutes) % 1440
+            const startVal = ('0' + (Math.floor(startMinutes / 60))).slice(-2) + ':' + ('0' + (startMinutes % 60)).slice(-2)
+            setSetlist(storage.updateSetlist(id, {
+              ...setlist,
+              startTime: startVal
+            }))
+            start.value = startVal
+          }} defaultValue={
+            function () {
+              const startTime = setlist.startTime || '19:30'
+              const startH = Number(startTime.split(':')[0])
+              const startM = Number(startTime.split(':')[1])
+              const minutes = concertDurationMinutes((setlist.breaks?.len || 0) * (setlist.breaks?.num || 0))
+              const endMinutes = ((startH * 60) + startM + minutes) % 1440
+              return ('0' + (Math.floor(endMinutes / 60))).slice(-2) + ':' + ('0' + (endMinutes % 60)).slice(-2)
+            }()
+          } />
         </div>
         <div className='button' onClick={() => {
           setDialog(
