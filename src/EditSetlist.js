@@ -7,7 +7,8 @@ import Header from './Header'
 import { byName, byArtist, byLength, byCat } from './songSort'
 import { downloadFile } from './util'
 import { PDFDownloadLink } from '@react-pdf/renderer'
-import SetlistSinglePDF from './SetlistSinglePDF'
+import SetlistSimplePDF from './SetlistSimplePDF'
+import SetlistDetailedPDF from './SetlistDetailedPDF'
 
 export default function EditSetlist() {
   let fullRepertoire = storage.getRepertoire()
@@ -399,7 +400,6 @@ export default function EditSetlist() {
               <u>Export setlist</u>
               <br />
               Export to JSON file:
-              <br />
               <button type='button' onClick={() => {
                 downloadFile({
                   data: JSON.stringify(setlist, null, 2),
@@ -411,13 +411,21 @@ export default function EditSetlist() {
                 Download JSON
               </button>
               <br />
-              Export to PDF file:
-              <br />
-              <PDFDownloadLink document={<SetlistSinglePDF setlist={setlist} />} fileName={'Setlist ' + setlist.concert + '.pdf'}>
+              Simple setlist to PDF file:
+              <PDFDownloadLink document={<SetlistSimplePDF setlist={setlist} />} fileName={'Setlist ' + setlist.concert + '.pdf'}>
                 {({ blob, url, loading, error }) =>
                   loading ? 'Preparing...' : 'Download PDF'
                 }
               </PDFDownloadLink>
+              <br />
+              Detailed setlist to PDF file:
+              <br/>
+              <PDFDownloadLink document={<SetlistDetailedPDF setlist={setlist} repertoire={fullRepertoire} />} fileName={'Setlist ' + setlist.concert + ' detailed.pdf'}>
+                {({ blob, url, loading, error }) =>
+                  loading ? 'Preparing...' : 'Download PDF'
+                }
+              </PDFDownloadLink>
+              <br />
               <div className='dialogAction'>
                 <button type='button' onClick={() => {
                   setDialog(<></>)

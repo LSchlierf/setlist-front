@@ -1,7 +1,7 @@
 import { Document, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
 import React from "react";
 
-function SetlistSinglePDF(props) {
+function SetlistSimplePDF(props) {
   const styles = StyleSheet.create({
     page: { padding: 40, display: 'flex', flexDirection: 'row', flexWrap: 'wrap', maxHeight: '100vh' },
     set: { padding: 15, width: '50%' },
@@ -44,4 +44,4 @@ function SetlistSinglePDF(props) {
   )
 }
 
-export default SetlistSinglePDF
+export default SetlistSimplePDF
