@@ -27,7 +27,7 @@ export default function EditRepertoire(props) {
       button.onclick = (e) => {
         e.preventDefault()
         let name = document.getElementById('newCategoryName').value
-        let type = ['newCategoryNumber', 'newCategoryString', 'newCategoryBool'].indexOf(document.querySelector('input[name=type]:checked').id)
+        let type = ['newCategoryNumber', 'newCategoryString', 'newCategoryBool', 'newCategoryStringMultiple'].indexOf(document.querySelector('input[name=type]:checked').id)
         addCategoryValues(name, type)
       }
     }
@@ -45,7 +45,10 @@ export default function EditRepertoire(props) {
           <label htmlFor='newCategoryNumber'>Number</label>
           <br />
           <input type='radio' id='newCategoryString' name='type' onInput={enableNext} />
-          <label htmlFor='newCategoryString'>Text</label>
+          <label htmlFor='newCategoryString'>Text (Single Select)</label>
+          <br />
+          <input type='radio' id='newCategoryStringMultiple' name='type' onInput={enableNext} />
+          <label htmlFor='newCategoryStringMultiple'>Text (Multiple Select)</label>
           <br />
           <input type='radio' id='newCategoryBool' name='type' onInput={enableNext} />
           <label htmlFor='newCategoryBool'>True / False</label>
@@ -139,6 +142,38 @@ export default function EditRepertoire(props) {
     )
   }
 
+  function addStringMultiple(name, options) {
+    setDialog(
+      <dialog id='dialog' open>
+        Add Values for {name}
+        <form onSubmit={(e) => {
+          e.preventDefault()
+          let input = document.getElementById('newCategoryOption')
+          let value = input.value
+          if (value !== '' && options.indexOf(value) === -1) {
+            input.value = ''
+            addStringMultiple(name, [...options, value])
+          }
+        }}>
+          {options.map((o) => {
+            return <div style={{ padding: 3 }} key={o}>
+              {o}
+            </div>
+          })}
+          <input id='newCategoryOption' type='text' />
+          <div className='dialogAction'>
+            <button type='button' onClick={(e) => { e.preventDefault(); setDialog(<></>) }}>Cancel</button>
+            <button type='button' onClick={(e) => {
+              e.preventDefault()
+              setRepertoire(storage.saveRepertoire({ ...repertoire, categories: [...repertoire.categories, { type: 'stringMultiple', title: name, valueRange: options, id: uuidv4() }] }))
+              setDialog(<></>)
+            }}>Ok</button>
+          </div>
+        </form>
+      </dialog>
+    )
+  }
+
   function addCategoryValues(name, type) {
     switch (type) {
       case 0:
@@ -151,6 +186,9 @@ export default function EditRepertoire(props) {
         setRepertoire(storage.saveRepertoire({ ...repertoire, categories: [...repertoire.categories, { type: 'bool', title: name, valueRange: [true, false], id: uuidv4() }] }))
         setDialog(<></>)
         break
+      case 3:
+        addStringMultiple(name, [])
+        break;
       default:
         setDialog(<></>)
         break
@@ -246,6 +284,45 @@ export default function EditRepertoire(props) {
     }))
   }
 
+  function multipleStringSelect(cat, song) {
+    return () => {
+      setDialog(
+        <dialog id='dialog' open>
+          Select {cat.title} for {song.title}
+          <br />
+          <form>
+            {cat.valueRange.map((v) => <>
+              <input key={v + '-input'} type='checkBox' id={cat.id + v} name={v} defaultChecked={song.properties?.[cat.id]?.includes(v) ? true : false} className={cat.id + '-select'} />
+              <label key={v + '-label'} htmlFor={v}>{v}</label>
+              <br key={v + '-br'} />
+            </>)}
+          </form>
+          <div className='dialogAction'>
+            <button type='button' onClick={() => setDialog(<></>)}>Cancel</button>
+            <button type='button' onClick={() => {
+              let selectedList = []
+              for (let item of document.getElementsByClassName(cat.id + '-select')){
+                if(item.checked) {
+                  selectedList.push(item.name)
+                }
+              }
+              setRepertoire(storage.saveRepertoire({
+                ...repertoire,
+                songs: repertoire.songs.map((s) => {
+                  if (s.id === song.id) {
+                    s.properties[cat.id] = selectedList
+                  }
+                  return s
+                })
+              }))
+              setDialog(<></>)
+            }}>Ok</button>
+          </div>
+        </dialog>
+      )
+    }
+  }
+
   function catSelector(cat, song) {
     switch (cat.type) {
       case 'bool':
@@ -280,6 +357,12 @@ export default function EditRepertoire(props) {
             <option value=''>Select</option>
             {cat.valueRange.map((val) => <option key={val} value={val}>{val}</option>)}
           </select>
+        )
+      case 'stringMultiple':
+        return (
+          <div className='slimButton' onClick={multipleStringSelect(cat, song)}>
+            {(song.properties && song.properties[cat.id] && song.properties[cat.id].length !== 0) ? song.properties[cat.id].join(', ') : 'Select'}
+          </div>
         )
       case 'number':
         return (

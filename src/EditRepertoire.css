@@ -19,6 +19,11 @@ th {
     width: fit-content;
 }
 
+.slimButton {
+    text-decoration: underline;
+    cursor: pointer;
+}
+
 .time {
     width: 40px;
 }

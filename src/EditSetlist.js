@@ -74,9 +74,11 @@ export default function EditSetlist() {
     switch (cat.type) {
       case 'string':
       case 'number':
-        return song.properties[cat.id]
+        return song.properties?.[cat.id]
       case 'bool':
-        return song.properties[cat.id] ? '✔' : '✗'
+        return song.properties?.[cat.id] ? '✔' : '✗'
+      case 'stringMultiple':
+        return song.properties?.[cat.id]?.join(', ')
       default:
         return <></>
     }
@@ -419,12 +421,48 @@ export default function EditSetlist() {
               </PDFDownloadLink>
               <br />
               Detailed setlist to PDF file:
-              <br/>
-              <PDFDownloadLink document={<SetlistDetailedPDF setlist={setlist} repertoire={fullRepertoire} />} fileName={'Setlist ' + setlist.concert + ' detailed.pdf'}>
-                {({ blob, url, loading, error }) =>
-                  loading ? 'Preparing...' : 'Download PDF'
-                }
-              </PDFDownloadLink>
+              <div>
+                <form>
+                  {repertoire.categories.map((c) =>
+                    <>
+                      <input key={c.id + '-checkbox'} className={'detailedPDFselect'} type='checkbox' name={c.id + '-detailedPDFselect'} value={c.id} defaultChecked={true} />
+                      <label key={c.id + '-label'} htmlFor={c.id + '-detailedPDFselect'}>{c.title}</label>
+                      <br />
+                    </>
+                  )}
+                </form>
+                <br />
+                <div className='dialogAction'>
+                  <button type='button' onClick={() => {
+                    let inputList = document.getElementsByClassName('detailedPDFselect')
+                    let selected = {}
+                    for (let item of inputList) {
+                      selected[item.value] = item.checked
+                    }
+                    setDialog(
+                      <dialog open id='dialog'>
+                        <u>Download detailed setlist PDF</u>
+                        <br/>
+                        <PDFDownloadLink document={<SetlistDetailedPDF setlist={setlist} repertoire={
+                          {
+                            ...repertoire,
+                            categories: repertoire.categories.filter((c) => selected[c.id])
+                          }
+                        }/>} fileName={'Setlist ' + setlist.concert + ' detailed.pdf'}>
+                          {({ blob, url, loading, error }) =>
+                            loading ? 'Preparing...' : 'Download PDF'
+                          }
+                        </PDFDownloadLink>
+                        <div className='dialogAction'>
+                          <button type='button' onClick={() => setDialog(<></>)} >Close</button>
+                        </div>
+                      </dialog>
+                    )
+                  }}>
+                    Generate PDF
+                  </button>
+                </div>
+              </div>
               <br />
               <div className='dialogAction'>
                 <button type='button' onClick={() => {

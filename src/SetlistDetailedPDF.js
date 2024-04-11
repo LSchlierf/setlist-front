@@ -150,7 +150,19 @@ function SetlistDetailedPDF(props) {
         {categories.map((c) => (
           <View style={[styles.cell, styles.cat]} key={c.id}>
             <Text style={styles.text}>
-              {(song.properties ? song.properties[c.id] : '')}
+              {
+                function () {
+                  switch (c.type) {
+                    case 'string':
+                    case 'number':
+                      return song.properties?.[c.id]
+                    case 'stringMultiple':
+                      return song.properties?.[c.id]?.join(', ')
+                    default:
+                      return 'not implemented'
+                  }
+                }()
+              }
             </Text>
           </View>
         ))}
