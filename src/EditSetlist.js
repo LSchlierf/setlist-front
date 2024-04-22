@@ -149,9 +149,6 @@ export default function EditSetlist() {
           newSets = [...newSets.slice(0, index), [...newSet, song], ...newSets.slice(index + 1)]
         } else {
           for (let i = 0; i < songs.length; i++) {
-            if (songs[i].classList.contains(songID)) {
-              continue
-            }
             let top = songs[i].getBoundingClientRect().top
             let bottom = songs[i].getBoundingClientRect().bottom
             if (y >= top && y <= bottom) {
@@ -554,5 +551,3 @@ export default function EditSetlist() {
     </div>
   )
 }
-
-// anfangszeit -> endzeit
