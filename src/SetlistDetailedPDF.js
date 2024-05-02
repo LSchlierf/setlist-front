@@ -44,8 +44,6 @@ function SetlistDetailedPDF(props) {
     songStarts.push(thisSetStarts) // round to next 5 min interval
   }
 
-  console.log(songStarts)
-
   let encoreStarts = []
   for (let song in encore) {
     encoreStarts.push(lastEnd)
