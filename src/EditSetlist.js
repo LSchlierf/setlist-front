@@ -1,18 +1,19 @@
 import './EditSetlist.css'
 
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import storage from './storage'
 import Header from './Header'
 import { byName, byArtist, byLength, byCat } from './songSort'
 import { downloadFile } from './util'
-import { PDFDownloadLink } from '@react-pdf/renderer'
+import { BlobProvider } from '@react-pdf/renderer'
 import SetlistSimplePDF from './SetlistSimplePDF'
 import SetlistDetailedPDF from './SetlistDetailedPDF'
 
 export default function EditSetlist() {
   let fullRepertoire = storage.getRepertoire()
   const [dialog, setDialog] = useState(<></>)
+  const [lastTime, setLastTime] = useState('start')
 
   function updateSetlist(setlist) {
     return {
@@ -30,7 +31,16 @@ export default function EditSetlist() {
     ...fullRepertoire,
     songs: fullRepertoire.songs.filter((s) => ([...setlist.sets.flat(), ...setlist.encore].find((t) => t?.id === s.id) === undefined))
   })
+  const [categories, setCategories] = useState(Object.fromEntries(fullRepertoire.categories.map((c) => [c.id, true])))
   const [lastSort, setLastSort] = useState({ func: sortByName, asc: true, cat: null })
+
+  useEffect(() => {
+    if (lastTime === 'start') {
+      startTimeInput()
+    } else {
+      endTimeInput()
+    }
+  }, [setlist])
 
   let leftButton = (
     <div onClick={() => navigate('/')} className='button'>
@@ -98,7 +108,7 @@ export default function EditSetlist() {
           <td>
             {Math.floor(song.length / 60)}m {song.length % 60}s
           </td>
-          {repertoire.categories.map((c) => <td key={c.id} style={{
+          {repertoire.categories.filter((c) => categories[c.id]).map((c) => <td key={c.id} style={{
             backgroundColor: c.type === 'bool' ? (song.properties[c.id] ? 'green' : 'red') : null
           }}>
             {catDisplay(song, c)}
@@ -116,8 +126,14 @@ export default function EditSetlist() {
     return Math.floor(sum / 3600) + 'h ' + (Math.floor(sum / 60) % 60) + 'm ' + (sum % 60) + 's'
   }
 
+  function setLengthApprox(set) {
+    let sum = set.reduce((a, s) => a + s.length, 0)
+    return Math.ceil(sum / 60 / 5) * 5
+  }
+
   function concertDurationMinutes(breaks) {
-    let sum = [...setlist.encore, ...setlist.sets.flat()].reduce((a, s) => a + s.length, 0) + (breaks * 60)
+    let setLengths = [...setlist.sets, setlist.encore].map((set) => Math.ceil(set.reduce((a, s) => a + s.length, 0) / 60 / 5) * 5)
+    let sum = (setLengths.reduce((a, s) => a + s, 0) * 60) + (breaks * 60)
     return Math.ceil(sum / 60)
   }
 
@@ -195,7 +211,7 @@ export default function EditSetlist() {
               <th>
                 Length
               </th>
-              {repertoire.categories.map((c) =>
+              {repertoire.categories.filter((c) => categories[c.id]).map((c) =>
                 <th key={c.id}>
                   {c.title}
                 </th>
@@ -210,10 +226,41 @@ export default function EditSetlist() {
           </tbody>
         </table>
         <div className='singleSetFoot'>
-          {set.length} Songs, {setLength(set)}
+          {set.length} Songs, ~{setLengthApprox(set)} min, {setLength(set)}
         </div>
       </div>
     )
+  }
+
+  function startTimeInput() {
+    const start = document.getElementById('startTime')
+    const startH = Number(start.value.split(':')[0])
+    const startM = Number(start.value.split(':')[1])
+    const end = document.getElementById('endTime')
+    const minutes = concertDurationMinutes(((setlist.breaks?.len || 0) * (Math.max(setlist.sets?.length - 1, 0) || 0)) + ((setlist.breaks?.buffer || 0) * (setlist.sets?.length)))
+    const endMinutes = ((startH * 60) + startM + minutes) % 1440
+    setSetlist(storage.updateSetlist(id, {
+      ...setlist,
+      startTime: start.value
+    }))
+    end.value = ('0' + (Math.floor(endMinutes / 60))).slice(-2) + ':' + ('0' + (endMinutes % 60)).slice(-2)
+    setLastTime('start')
+  }
+
+  function endTimeInput() {
+    const start = document.getElementById('startTime')
+    const end = document.getElementById('endTime')
+    const endH = Number(end.value.split(':')[0])
+    const endM = Number(end.value.split(':')[1])
+    const minutes = concertDurationMinutes(((setlist.breaks?.len || 0) * (Math.max(setlist.sets?.length - 1, 0) || 0)) + ((setlist.breaks?.buffer || 0) * (setlist.sets?.length)))
+    const startMinutes = ((((endH * 60) + endM) + 1440) - minutes) % 1440
+    const startVal = ('0' + (Math.floor(startMinutes / 60))).slice(-2) + ':' + ('0' + (startMinutes % 60)).slice(-2)
+    setSetlist(storage.updateSetlist(id, {
+      ...setlist,
+      startTime: startVal
+    }))
+    start.value = startVal
+    setLastTime('end')
   }
 
   return (
@@ -256,10 +303,39 @@ export default function EditSetlist() {
           e.preventDefault()
           const songID = e.dataTransfer.getData('id')
           const from = e.dataTransfer.getData('from')
-          if (from === 'encore') {
+          const song = fullRepertoire.songs.find((s) => s.id === songID)
+          let newEncore = setlist.encore
+          if (from === 'encore') { // moving song within encore
+            const songs = document.getElementsByClassName('encore')
+            const y = e.clientY
+            if (songs.length === 0 || y < songs[0].getBoundingClientRect().top) {
+              newEncore = [song, ...newEncore.filter((s) => s.id !== songID)]
+            } else if (y > songs[songs.length - 1].getBoundingClientRect().bottom) {
+              newEncore = [...newEncore.filter((s) => s.id !== songID), song]
+            } else {
+              for (let i = 0; i < songs.length; i++) {
+                let top = songs[i].getBoundingClientRect().top
+                let bottom = songs[i].getBoundingClientRect().bottom
+                if (songs[i].classList.contains(songID)) {
+                  continue
+                }
+                if (y >= top && y <= bottom) {
+                  newEncore = newEncore.filter((s) => s.id !== songID)
+                  if (y - top < bottom - y) {
+                    newEncore = [...newEncore.slice(0, i), song, ...newEncore.slice(i)]
+                  } else {
+                    newEncore = [...newEncore.slice(0, i + 1), song, ...newEncore.slice(i + 1)]
+                  }
+                  break
+                }
+              }
+            }
+            setSetlist(storage.updateSetlist(id, {
+              ...setlist,
+              encore: newEncore
+            }))
             return
           }
-          const song = fullRepertoire.songs.find((s) => s.id === songID)
           let newSets = setlist.sets
           if (from === 'repertoire') {
             setRepertoire({
@@ -272,7 +348,6 @@ export default function EditSetlist() {
           }
           const songs = document.getElementsByClassName('encore')
           const y = e.clientY
-          let newEncore = setlist.encore
           if (songs.length === 0 || y < songs[0].getBoundingClientRect().top) {
             newEncore = [song, ...newEncore]
           } else if (y > songs[songs.length - 1].getBoundingClientRect().bottom) {
@@ -287,6 +362,7 @@ export default function EditSetlist() {
                 } else {
                   newEncore = [...newEncore.slice(0, i + 1), song, ...newEncore.slice(i + 1)]
                 }
+                break
               }
             }
           }
@@ -311,7 +387,7 @@ export default function EditSetlist() {
                 <th>
                   Length
                 </th>
-                {repertoire.categories.map((c) =>
+                {repertoire.categories.filter((c) => categories[c.id]).map((c) =>
                   <th key={c.id}>
                     {c.title}
                   </th>
@@ -326,24 +402,14 @@ export default function EditSetlist() {
             </tbody>
           </table>
           <div className='singleSetFoot'>
-            {setlist.encore.length} Songs, {setLength(setlist.encore)}
+            {setlist.encore.length} Songs, ~{setLengthApprox(setlist.encore)} min, {setLength(setlist.encore)}
           </div>
         </div>
         <div className='info'>
           Total songs: {[...setlist.encore, ...setlist.sets.flat()].length}
           <br />
-          Total length (without breaks): {setLength([...setlist.encore, ...setlist.sets.flat()])}
+          Raw length (without breaks / buffer): <b><u>{setLength([...setlist.encore, ...setlist.sets.flat()])}</u></b>
           <br />
-          <input id='breaksNum' type='number' defaultValue={setlist.breaks?.num} min={0} style={{ width: 50 }} onInput={() => {
-            const input = document.getElementById('breaksNum')
-            setSetlist(storage.updateSetlist(id, {
-              ...setlist,
-              breaks: {
-                ...setlist.breaks,
-                num: Number(input.value)
-              }
-            }))
-          }} /> breaks,
           <input id='breaksLen' type='number' defaultValue={setlist.breaks?.len} min={0} max={60} style={{ width: 50 }} onInput={() => {
             const input = document.getElementById('breaksLen')
             setSetlist(storage.updateSetlist(id, {
@@ -353,45 +419,51 @@ export default function EditSetlist() {
                 len: Number(input.value)
               }
             }))
-          }} /> minutes each
+          }} /> minute break after each set (except last set)
           <br />
-          Total length (with breaks): {setLength([...setlist.encore, ...setlist.sets.flat(), { length: ((setlist.breaks?.len || 0) * (setlist.breaks?.num || 0) * 60) }])}
-          <br />
-          Start time: <input defaultValue={setlist.startTime || '19:30'} id='startTime' type='time' onInput={() => {
-            const start = document.getElementById('startTime')
-            const startH = Number(start.value.split(':')[0])
-            const startM = Number(start.value.split(':')[1])
-            const end = document.getElementById('endTime')
-            const minutes = concertDurationMinutes((setlist.breaks?.len || 0) * (setlist.breaks?.num || 0))
-            const endMinutes = ((startH * 60) + startM + minutes) % 1440
+          <input id='breaksBuffer' type='number' defaultValue={setlist.breaks?.buffer} min={0} max={60} style={{ width: 50 }} onInput={() => {
+            const input = document.getElementById('breaksBuffer')
             setSetlist(storage.updateSetlist(id, {
               ...setlist,
-              startTime: start.value
+              breaks: {
+                ...setlist.breaks,
+                buffer: Number(input.value)
+              }
             }))
-            end.value = ('0' + (Math.floor(endMinutes / 60))).slice(-2) + ':' + ('0' + (endMinutes % 60)).slice(-2)
-          }} />, End time: <input id='endTime' type='time' onInput={() => {
-            const start = document.getElementById('startTime')
-            const end = document.getElementById('endTime')
-            const endH = Number(end.value.split(':')[0])
-            const endM = Number(end.value.split(':')[1])
-            const minutes = concertDurationMinutes((setlist.breaks?.len || 0) * (setlist.breaks?.num || 0))
-            const startMinutes = ((((endH * 60) + endM) + 1440) - minutes) % 1440
-            const startVal = ('0' + (Math.floor(startMinutes / 60))).slice(-2) + ':' + ('0' + (startMinutes % 60)).slice(-2)
-            setSetlist(storage.updateSetlist(id, {
-              ...setlist,
-              startTime: startVal
-            }))
-            start.value = startVal
-          }} defaultValue={
+          }} /> minute buffer per set
+          <br />
+          Total length (with breaks & buffer): <b><u>{
+            function () {
+              let length = concertDurationMinutes(((setlist.breaks?.len || 0) * (Math.max(setlist.sets?.length - 1, 0) || 0)) + ((setlist.breaks?.buffer || 0) * (setlist.sets?.length)))
+              return Math.floor(length / 60) + 'h ' + (length % 60) + 'm'
+            }()
+          }</u></b>
+          <br />
+          Start time: <input defaultValue={setlist.startTime || '19:30'} id='startTime' type='time' onInput={startTimeInput} />,
+          End time: <input id='endTime' type='time' onInput={endTimeInput} defaultValue={
             function () {
               const startTime = setlist.startTime || '19:30'
               const startH = Number(startTime.split(':')[0])
               const startM = Number(startTime.split(':')[1])
-              const minutes = concertDurationMinutes((setlist.breaks?.len || 0) * (setlist.breaks?.num || 0))
+              const minutes = concertDurationMinutes(((setlist.breaks?.len || 0) * (Math.max(setlist.sets?.length - 1, 0) || 0)) + ((setlist.breaks?.buffer || 0) * (setlist.sets?.length)))
               const endMinutes = ((startH * 60) + startM + minutes) % 1440
               return ('0' + (Math.floor(endMinutes / 60))).slice(-2) + ':' + ('0' + (endMinutes % 60)).slice(-2)
             }()
           } />
+        </div>
+        <div className='info'>
+          Select categories to display:
+          <br />
+          {repertoire.categories.map((c) => (
+            <div>
+              <input defaultChecked={categories[c.id]} id={'selectShowCat-' + c.id} type='checkbox' onInput={() => {
+                const input = document.getElementById('selectShowCat-' + c.id)
+                let newCategories = { ...categories }
+                newCategories[c.id] = input.checked
+                setCategories(newCategories)
+              }} /> {c.title}
+            </div>
+          ))}
         </div>
         <div className='button' onClick={() => {
           setDialog(
@@ -411,11 +483,11 @@ export default function EditSetlist() {
               </button>
               <br />
               Simple setlist to PDF file:
-              <PDFDownloadLink document={<SetlistSimplePDF setlist={setlist} />} fileName={'Setlist ' + setlist.concert + '.pdf'}>
-                {({ blob, url, loading, error }) =>
-                  loading ? 'Preparing...' : 'Download PDF'
-                }
-              </PDFDownloadLink>
+              <BlobProvider document={<SetlistSimplePDF setlist={setlist} />} >
+                {({ blob, url, loading, error }) => (
+                  loading ? 'loading...' : <a href={url} target='_blank' rel='noopen noreferrer' >Download</a>
+                )}
+              </BlobProvider>
               <br />
               Detailed setlist to PDF file:
               <div>
@@ -439,17 +511,17 @@ export default function EditSetlist() {
                     setDialog(
                       <dialog open id='dialog'>
                         <u>Download detailed setlist PDF</u>
-                        <br/>
-                        <PDFDownloadLink document={<SetlistDetailedPDF setlist={setlist} repertoire={
+                        <br />
+                        <BlobProvider document={<SetlistDetailedPDF setlist={setlist} repertoire={
                           {
                             ...repertoire,
                             categories: repertoire.categories.filter((c) => selected[c.id])
                           }
-                        }/>} fileName={'Setlist ' + setlist.concert + ' detailed.pdf'}>
-                          {({ blob, url, loading, error }) =>
-                            loading ? 'Preparing...' : 'Download PDF'
-                          }
-                        </PDFDownloadLink>
+                        } />} >
+                          {({ blob, url, loading, error }) => (
+                            loading ? 'loading...' : <a href={url} target='_blank' rel='noopen noreferrer'>Download</a>
+                          )}
+                        </BlobProvider>
                         <div className='dialogAction'>
                           <button type='button' onClick={() => setDialog(<></>)} >Close</button>
                         </div>
@@ -473,7 +545,10 @@ export default function EditSetlist() {
         }} >
           Export setlist
         </div>
-        {/* {JSON.stringify(setlist)} */}
+        <div className='debug'>
+          {/* {JSON.stringify(categories)} */}
+          {/* {JSON.stringify(setlist)} */}
+        </div>
       </div>
       <div className='repertoireBank' onDragOver={(e) => e.preventDefault()} onDrop={(e) => {
         e.preventDefault()
@@ -529,7 +604,7 @@ export default function EditSetlist() {
                   </div>
                 </div>
               </th>
-              {repertoire.categories.map((c) => <th key={c.id}>
+              {repertoire.categories.filter((c) => categories[c.id]).map((c) => <th key={c.id}>
                 <div className='repCategory'>
                   {c.title}
                   <div className='categoryAction'>
@@ -548,6 +623,6 @@ export default function EditSetlist() {
           </tbody>
         </table>
       </div>
-    </div>
+    </div >
   )
 }

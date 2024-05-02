@@ -19,7 +19,7 @@ function App() {
   }
 
   function newSetlist() {
-    let id = storage.addSetlist({ concert: 'new setlist', sets: [], encore: [], breaks: { num: 0, len: 15 }, startTime: '19:30' })
+    let id = storage.addSetlist({ concert: 'new setlist', sets: [], encore: [], breaks: { len: 20, buffer: 10 }, startTime: '19:30' })
     setSetlists(storage.getSetlists())
     editSetlist(id)()
   }

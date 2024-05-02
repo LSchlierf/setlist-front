@@ -5,6 +5,7 @@ function SetlistDetailedPDF(props) {
   const sets = props.setlist?.sets || []
   const encore = props.setlist?.encore || []
   const breakLength = props.setlist?.breaks?.len || 0
+  const bufferLength = props.setlist?.breaks?.buffer || 0
   const startTime = props.setlist?.startTime || '19:30'
   const concert = props.setlist?.concert || ''
   const categories = props.repertoire?.categories?.filter((c) => c.type !== 'bool') || []
@@ -12,8 +13,8 @@ function SetlistDetailedPDF(props) {
 
   const titleWidth = 18
   const boolWidth = 15
-  const notesWidth = 25
-  const timeWidth = 6
+  const notesWidth = 28
+  const timeWidth = 4.5
 
   const remainingWidth = 100 - titleWidth - boolWidth - notesWidth - timeWidth
 
@@ -34,12 +35,16 @@ function SetlistDetailedPDF(props) {
       thisSetStarts.push(lastEnd)
       lastEnd = nextTime(lastEnd, sets[set][song].length)
     }
-    thisSetStarts.push(lastEnd)
+    thisSetStarts.push(nextRounded(nextTime(lastEnd, (bufferLength * 60))))
     if (set < sets.length - 1) {
-      lastEnd = nextTime(lastEnd, breakLength * 60)
+      lastEnd = nextRounded(nextTime(lastEnd, (breakLength * 60) + (bufferLength * 60)))
+    } else {
+      lastEnd = nextRounded(nextTime(lastEnd, (bufferLength * 60)))
     }
-    songStarts.push(thisSetStarts)
+    songStarts.push(thisSetStarts) // round to next 5 min interval
   }
+
+  console.log(songStarts)
 
   let encoreStarts = []
   for (let song in encore) {
@@ -50,6 +55,10 @@ function SetlistDetailedPDF(props) {
 
   function setTime(set) {
     return set.reduce((a, s) => a + s.length, 0)
+  }
+
+  function setTimeRounded(set) {
+    return Math.ceil(set.reduce((a, s) => a + s.length, 0) / 60 / 5) * 60 * 5
   }
 
   function nextTime(time, duration) {
@@ -63,6 +72,17 @@ function SetlistDetailedPDF(props) {
     return ('0' + Math.floor(end / 3600)).slice(-2) + ':' + ('0' + (Math.floor(end / 60) % 60)).slice(-2) + ':' + ('0' + (end % 60)).slice(-2)
   }
 
+  function nextRounded(time) {
+    const h = Number(time.split(':')[0])
+    const m = Number(time.split(':')[1])
+    const s = Number(time.split(':')[2] || 0)
+
+    const start = (h * 3600) + (m * 60) + s
+    const end = Math.ceil(start / 60 / 5) * 60 * 5
+
+    return ('0' + Math.floor(end / 3600)).slice(-2) + ':' + ('0' + (Math.floor(end / 60) % 60)).slice(-2) + ':' + ('0' + (end % 60)).slice(-2)
+  }
+
   function nextTimeNoSecs(time, duration) {
     return nextTime(time, duration).substring(0, 5)
   }
@@ -71,11 +91,11 @@ function SetlistDetailedPDF(props) {
     page: { padding: 25 },
     flexRow: { display: 'flex', flexDirection: 'row' },
     column: { width: '100%', display: 'flex', flexDirection: 'column' },
-    values: { width: '90%', display: 'flex', flexDirection: 'row' },
+    values: { width: '92%', display: 'flex', flexDirection: 'row' },
     width100: { width: '100%' },
     height100: { height: '100%' },
     heightMin: { height: 40 },
-    timeBlock: { width: '10%', height: '100%' },
+    timeBlock: { width: '8%', height: '100%' },
     breakLine: { backgroundColor: 'lightgray', borderBottom: '1px solid black', borderTop: '1px solid black' },
     headerTextBold: { fontFamily: 'Helvetica-Bold', fontSize: fontSizeHeader },
     headerTextNotBold: { fontFamily: 'Helvetica', fontSize: fontSizeHeader },
@@ -233,7 +253,7 @@ function SetlistDetailedPDF(props) {
         <View style={[styles.cell, styles.timeBlock, styles.flexRow]}>
           <View style={[styles.flexRow, styles.width100, styles.height100, styles.justifyCenter, styles.alignCenter]}>
             <Text style={styles.textTimeBlock}>
-              {Math.ceil(setTime(encore) / 60)} min
+              {setTimeRounded(encore) / 60} min
             </Text>
           </View>
         </View>
@@ -253,7 +273,7 @@ function SetlistDetailedPDF(props) {
             </View>
             <View style={[styles.time, styles.flexRow, styles.justifyEnd]}>
               <Text style={styles.textTime}>
-                {nextTime('00:00', setTime([...sets.flat(), ...encore]))}
+                {nextTime('00:00', [...sets, encore].map(s => setTimeRounded(s) + (bufferLength * 60)).reduce((a, b) => a + b, 0) - (bufferLength * 60))}
               </Text>
             </View>
           </View>
@@ -287,13 +307,13 @@ function SetlistDetailedPDF(props) {
             </View>
             <View style={[styles.time, styles.flexRow, styles.justifyEnd]}>
               <Text style={styles.textTime}>
-                {nextTime('00:00', setTime([...sets.flat(), ...encore, { length: ((sets.length - 1) * breakLength * 60) }]))}
+                {nextTime('00:00', [...sets, encore].map(s => setTimeRounded(s) + (bufferLength * 60)).reduce((a, b) => a + b, 0) - (bufferLength * 60) + setTime([{ length: ((sets.length - 1) * breakLength * 60) }]))}
               </Text>
             </View>
           </View>
           <View style={[styles.timeBlock, styles.flexRow, styles.justifyCenter]}>
             <Text style={styles.textTime}>
-              End: {nextTime(startTime, setTime([...encore, ...sets.flat(), ...[{ length: breakLength * (sets.length - 1) * 60 }]]))}
+              End: {nextTime(startTime, [...sets, encore].map(s => setTimeRounded(s) + (bufferLength * 60)).reduce((a, b) => a + b, 0) - (bufferLength * 60) + setTime([{ length: ((sets.length - 1) * breakLength * 60) }]))}
             </Text>
           </View>
         </View>

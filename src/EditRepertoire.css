@@ -2,7 +2,9 @@ table {
     margin: 30px;
 }
 
-table, th, td {
+table,
+th,
+td {
     padding: 10px;
     border: 1px solid black;
     border-collapse: collapse;
@@ -30,6 +32,7 @@ th {
 
 .info {
     padding: 10px;
+    line-height: 1.5;
     /* white-space: pre-line; */
 }
 
@@ -41,7 +44,7 @@ th {
     z-index: 3;
 }
 
-#dialog > * {
+#dialog>* {
     margin: 10px;
 }
 
@@ -67,6 +70,6 @@ th {
     justify-content: space-between;
 }
 
-.catColorSingle > input {
+.catColorSingle>input {
     margin-left: 20px;
 }

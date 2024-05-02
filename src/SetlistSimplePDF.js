@@ -11,7 +11,7 @@ function SetlistSimplePDF(props) {
   })
 
   return (
-    <Document creator={undefined} producer={undefined} >
+    <Document title={'Setlist ' + props.setlist.concert} creator={undefined} producer={undefined} >
       <Page style={styles.page}>
         {props.setlist.sets.map((set, setIndex) => <View wrap={false} key={setIndex} style={styles.set}>
           <View >
