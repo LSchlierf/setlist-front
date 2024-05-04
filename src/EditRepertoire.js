@@ -609,16 +609,20 @@ export default function EditRepertoire(props) {
             }
             let id = e.dataTransfer.getData('id')
             let x = e.clientX
-            if (x < document.getElementById(repertoire.categories[0].id).getBoundingClientRect().left) {
+            let headers = document.getElementsByClassName('categoryHeader')
+            if (headers.length === 0 || x < headers[0].getBoundingClientRect().left) {
               setRepertoire(storage.saveRepertoire({ ...repertoire, categories: [repertoire.categories.find((c) => c.id === id), ...repertoire.categories.filter((c) => c.id !== id)] }))
-            } else if (x > document.getElementById(repertoire.categories[repertoire.categories.length - 1].id).getBoundingClientRect().right) {
+            } else if (x > headers[headers.length - 1].getBoundingClientRect().right) {
               setRepertoire(storage.saveRepertoire({ ...repertoire, categories: [...repertoire.categories.filter((c) => c.id !== id), repertoire.categories.find((c) => c.id === id)] }))
             } else {
               for (let i = 0; i < repertoire.categories.length; i++) {
                 if (id === repertoire.categories[i].id) {
                   continue
                 }
-                let rect = document.getElementById(repertoire.categories[i].id).getBoundingClientRect()
+                let rect = document.getElementById(repertoire.categories[i].id)?.getBoundingClientRect()
+                if(rect === undefined) {
+                  continue
+                }
                 if (x >= rect.left && x <= rect.right) {
                   if (x - rect.left < rect.right - x) {
                     let otherCatsL = repertoire.categories.slice(0, i).filter((c) => c.id !== id)
@@ -656,7 +660,7 @@ export default function EditRepertoire(props) {
                 <div className='button' onClick={() => sortByLength(false)}>˅</div>
               </div>
             </th>
-            {repertoire.categories.filter((c) => c.show === undefined ? true : c.show).map((c) => <th draggable='true' id={c.id} key={c.id} onDragStart={(e) => {
+            {repertoire.categories.filter((c) => c.show === undefined ? true : c.show).map((c) => <th draggable='true' className='categoryHeader' id={c.id} key={c.id} onDragStart={(e) => {
               e.dataTransfer.setData('id', c.id)
               e.dataTransfer.setData('type', 'category')
             }}>
@@ -727,7 +731,7 @@ export default function EditRepertoire(props) {
         Show categories:
         <br />
         {repertoire.categories.map((c) => (
-          <div><input defaultChecked={c.show === undefined ? true : c.show} id={'showCategoryCheckBox-' + c.id} type='checkbox' onInput={() => {
+          <div key={'categoryShowSelect-' + c.id} ><input defaultChecked={c.show === undefined ? true : c.show} id={'showCategoryCheckBox-' + c.id} type='checkbox' onInput={() => {
             const input = document.getElementById('showCategoryCheckBox-' + c.id)
             let newCategories = repertoire.categories.map((cat) => {
               if (cat.id === c.id) {
