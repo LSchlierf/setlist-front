@@ -31,7 +31,7 @@ export default function EditSetlist() {
     ...fullRepertoire,
     songs: fullRepertoire.songs.filter((s) => ([...setlist.sets.flat(), ...setlist.encore].find((t) => t?.id === s.id) === undefined))
   })
-  const [categories, setCategories] = useState(Object.fromEntries(fullRepertoire.categories.map((c) => [c.id, true])))
+  const [categories, setCategories] = useState(Object.fromEntries(fullRepertoire.categories.map((c) => [c.id, (c.show === undefined ? true : c.show)])))
   const [lastSort, setLastSort] = useState({ func: sortByName, asc: true, cat: null })
 
   useEffect(() => {

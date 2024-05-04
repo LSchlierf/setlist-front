@@ -399,7 +399,7 @@ export default function EditRepertoire(props) {
           <input className='time' id={song.id + '-sec'} type='number' min={-1} max={60} defaultValue={song.length % 60} onChange={() => updateTime(song.id)} />
           s
         </td>
-        {repertoire.categories.map((c) => {
+        {repertoire.categories.filter((c) => c.show === undefined ? true : c.show).map((c) => {
           return <td key={c.id} style={{
             backgroundColor: repertoire.color?.category === c.id ? repertoire.color.colors[song.properties[c.id]] : null
           }}>
@@ -656,7 +656,7 @@ export default function EditRepertoire(props) {
                 <div className='button' onClick={() => sortByLength(false)}>˅</div>
               </div>
             </th>
-            {repertoire.categories.map((c) => <th draggable='true' id={c.id} key={c.id} onDragStart={(e) => {
+            {repertoire.categories.filter((c) => c.show === undefined ? true : c.show).map((c) => <th draggable='true' id={c.id} key={c.id} onDragStart={(e) => {
               e.dataTransfer.setData('id', c.id)
               e.dataTransfer.setData('type', 'category')
             }}>
@@ -724,6 +724,26 @@ export default function EditRepertoire(props) {
         Total length: {totalLength()}
         <br />
         <br />
+        Show categories:
+        <br />
+        {repertoire.categories.map((c) => (
+          <div><input defaultChecked={c.show === undefined ? true : c.show} id={'showCategoryCheckBox-' + c.id} type='checkbox' onInput={() => {
+            const input = document.getElementById('showCategoryCheckBox-' + c.id)
+            let newCategories = repertoire.categories.map((cat) => {
+              if (cat.id === c.id) {
+                return {
+                  ...cat,
+                  show: input.checked
+                }
+              }
+              return cat
+            })
+            setRepertoire(storage.saveRepertoire({
+              ...repertoire,
+              categories: newCategories
+            }))
+          }}/>{c.title}</div>
+        ))}
         {/* {JSON.stringify(repertoire, null, 2)} */}
       </div>
       {dialog}
