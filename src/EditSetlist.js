@@ -14,6 +14,7 @@ export default function EditSetlist() {
   let fullRepertoire = storage.getRepertoire()
   const [dialog, setDialog] = useState(<></>)
   const [lastTime, setLastTime] = useState('start')
+  const [repertoireDragging, setRepertoireDragging] = useState(false)
 
   function updateSetlist(setlist) {
     return {
@@ -40,7 +41,7 @@ export default function EditSetlist() {
     } else {
       endTimeInput()
     }
-  }, [setlist])
+  }, [setlist.sets, setlist.encore, setlist.breaks.len, setlist.breaks.buffer, lastTime])
 
   let leftButton = (
     <div onClick={() => navigate('/')} className='button'>
@@ -244,7 +245,6 @@ export default function EditSetlist() {
       startTime: start.value
     }))
     end.value = ('0' + (Math.floor(endMinutes / 60))).slice(-2) + ':' + ('0' + (endMinutes % 60)).slice(-2)
-    setLastTime('start')
   }
 
   function endTimeInput() {
@@ -260,11 +260,17 @@ export default function EditSetlist() {
       startTime: startVal
     }))
     start.value = startVal
-    setLastTime('end')
   }
 
   return (
-    <div className='pageContainer'>
+    <div className='pageContainer' onMouseMove={(e) => {
+      if(!repertoireDragging) return
+      let newWidth = window.innerWidth - e.clientX + 4
+      const bank = document.getElementById('repertoireBank')
+      bank.style.width = newWidth + 'px'
+    }} onMouseUp={() => {
+      setRepertoireDragging(false)
+    }} >
       <Header title='Edit setlist' leftButton={leftButton} />
       {dialog}
       <div className='setlistBank'>
@@ -439,8 +445,8 @@ export default function EditSetlist() {
             }()
           }</u></b>
           <br />
-          Start time: <input defaultValue={setlist.startTime || '19:30'} id='startTime' type='time' onInput={startTimeInput} />,
-          End time: <input id='endTime' type='time' onInput={endTimeInput} defaultValue={
+          Start time: <input defaultValue={setlist.startTime || '19:30'} id='startTime' type='time' onInput={() => {setLastTime('start'); startTimeInput()}} />,
+          End time: <input id='endTime' type='time' onInput={() => {setLastTime('end'); endTimeInput()}} defaultValue={
             function () {
               const startTime = setlist.startTime || '19:30'
               const startH = Number(startTime.split(':')[0])
@@ -550,7 +556,8 @@ export default function EditSetlist() {
           {/* {JSON.stringify(setlist)} */}
         </div>
       </div>
-      <div className='repertoireBank' onDragOver={(e) => e.preventDefault()} onDrop={(e) => {
+
+      <div id='repertoireBank' className='repertoireBank' onDragOver={(e) => e.preventDefault()} onDrop={(e) => {
         e.preventDefault()
         const songID = e.dataTransfer.getData('id')
         const from = e.dataTransfer.getData('from')
@@ -574,6 +581,13 @@ export default function EditSetlist() {
           songs: [...repertoire.songs, fullRepertoire.songs.find((s) => s.id === songID)]
         }, lastSort.cat)
       }}>
+        <div className='repertoireBankVert' onMouseDown={() => {
+          setRepertoireDragging(true);
+        }} >
+          <div className='repertoireBankVertDot' />
+          <div className='repertoireBankVertDot' />
+          <div className='repertoireBankVertDot' />
+        </div>
         <table>
           <thead>
             <tr>
