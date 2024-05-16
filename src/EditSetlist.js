@@ -262,13 +262,17 @@ export default function EditSetlist() {
     start.value = startVal
   }
 
+  const trackMove = (e) => {
+    if(!repertoireDragging) return
+    let newWidth = window.innerWidth - e.clientX + 4
+    const bank = document.getElementById('repertoireBank')
+    bank.style.width = newWidth + 'px'
+  }
+
   return (
-    <div className='pageContainer' onMouseMove={(e) => {
-      if(!repertoireDragging) return
-      let newWidth = window.innerWidth - e.clientX + 4
-      const bank = document.getElementById('repertoireBank')
-      bank.style.width = newWidth + 'px'
-    }} onMouseUp={() => {
+    <div className='pageContainer' onMouseMove={trackMove} onPointerMove={trackMove} onMouseUp={() => {
+      setRepertoireDragging(false)
+    }} onPointerUp={() => {
       setRepertoireDragging(false)
     }} >
       <Header title='Edit setlist' leftButton={leftButton} />
@@ -582,7 +586,9 @@ export default function EditSetlist() {
         }, lastSort.cat)
       }}>
         <div className='repertoireBankVert' onMouseDown={() => {
-          setRepertoireDragging(true);
+          setRepertoireDragging(true)
+        }} onPointerDown={() => {
+          setRepertoireDragging(true)
         }} >
           <div className='repertoireBankVertDot' />
           <div className='repertoireBankVertDot' />

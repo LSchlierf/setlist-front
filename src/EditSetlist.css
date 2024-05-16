@@ -22,16 +22,28 @@
 }
 
 .repertoireBankVert {
-    height: 100vh;
-    width: 8px;
-    background-color: rgb(70, 70, 70);
-    flex-shrink: 0;
-    cursor: ew-resize;
-    position: fixed;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
+    display: none;
+}
+
+@media (pointer: fine) or (pointer: coarse) {   
+    .repertoireBankVert {
+        height: 100vh;
+        width: 8px;
+        background-color: rgb(70, 70, 70);
+        flex-shrink: 0;
+        cursor: ew-resize;
+        position: fixed;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+    }
+}
+
+@media (pointer: coarse) {
+    .repertoireBankVert {
+        width: 15px;
+    }
 }
 
 .repertoireBankVertDot {
