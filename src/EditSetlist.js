@@ -585,9 +585,11 @@ export default function EditSetlist() {
           songs: [...repertoire.songs, fullRepertoire.songs.find((s) => s.id === songID)]
         }, lastSort.cat)
       }}>
-        <div className='repertoireBankVert' onMouseDown={() => {
+        <div className='repertoireBankVert' onMouseDown={(e) => {
+          e.preventDefault()
           setRepertoireDragging(true)
-        }} onPointerDown={() => {
+        }} onPointerDown={(e) => {
+          e.preventDefault()
           setRepertoireDragging(true)
         }} >
           <div className='repertoireBankVertDot' />
