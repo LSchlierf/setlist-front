@@ -601,7 +601,7 @@ export default function EditRepertoire(props) {
     <>
       <Header title='Edit Repertoire' leftButton={leftButton} />
       <table style={{ maxWidth: 'calc(100% - 20px' }}>
-        <thead>
+        <thead className='repertoireTableHeader'>
           <tr onDragOver={(e) => e.preventDefault()} onDrop={(e) => {
             e.preventDefault()
             if (e.dataTransfer.getData('type') !== 'category') {

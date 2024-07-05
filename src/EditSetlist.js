@@ -597,7 +597,7 @@ export default function EditSetlist() {
           <div className='repertoireBankVertDot' />
         </div>
         <table>
-          <thead>
+          <thead className='repertoireTableHeader'>
             <tr>
               <th>
                 <div className='repCategory' >
