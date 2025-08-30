@@ -1,23 +1,38 @@
 import './EditRepertoire.css'
 
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import Header from './Header'
 import storage from './storage'
-
 import { v4 as uuidv4 } from 'uuid'
 import { useNavigate } from 'react-router-dom'
-
 import { byName, byArtist, byLength, byCat } from './songSort'
 import { downloadFile } from './util'
 
+const DEFAULT_REPERTOIRE = { categories: [], songs: [] }
+
 export default function EditRepertoire(props) {
-  const [repertoire, setRepertoire] = useState(storage.getRepertoire())
+  const [repertoire, setRepertoire] = useState(DEFAULT_REPERTOIRE)
   const [dialog, setDialog] = useState(<></>)
+
+  useEffect(() => {
+    storage.init().then(() => {
+      storage.getRepertoire().then(setRepertoire)
+      storage.socket.on('repertoire', setRepertoire)
+    })
+    return () => {
+      storage.socket.off('repertoire', setRepertoire)
+    }
+  }, [])
 
   let navigate = useNavigate()
 
+  function handleRepertoireChange(newRepertoire) {
+    setRepertoire(newRepertoire)
+    storage.socket.emit('repertoire', newRepertoire)
+  }
+
   function deleteCategory(id) {
-    setRepertoire(storage.saveRepertoire({ ...repertoire, categories: repertoire.categories.filter((c) => c.id !== id), songs: repertoire.songs.map(s => { delete s.properties[id]; return s }) }))
+    handleRepertoireChange({ ...repertoire, categories: repertoire.categories.filter((c) => c.id !== id), songs: repertoire.songs.map(s => { delete s.properties[id]; return s }) })
   }
 
   function addCategory() {
@@ -101,7 +116,7 @@ export default function EditRepertoire(props) {
               e.preventDefault()
               let min = Number(document.getElementById('newCategoryMin').value)
               let max = Number(document.getElementById('newCategoryMax').value)
-              setRepertoire(storage.saveRepertoire({ ...repertoire, categories: [...repertoire.categories, { type: 'number', title: name, valueRange: Array.from({ length: max - min + 1 }, (_, i) => min + i), id: uuidv4() }] }))
+              handleRepertoireChange({ ...repertoire, categories: [...repertoire.categories, { type: 'number', title: name, valueRange: Array.from({ length: max - min + 1 }, (_, i) => min + i), id: uuidv4() }] })
               setDialog(<></>)
             }}>Ok</button>
           </div>
@@ -133,7 +148,7 @@ export default function EditRepertoire(props) {
             <button type='button' onClick={(e) => { e.preventDefault(); setDialog(<></>) }}>Cancel</button>
             <button type='button' onClick={(e) => {
               e.preventDefault()
-              setRepertoire(storage.saveRepertoire({ ...repertoire, categories: [...repertoire.categories, { type: 'string', title: name, valueRange: options, id: uuidv4() }] }))
+              handleRepertoireChange({ ...repertoire, categories: [...repertoire.categories, { type: 'string', title: name, valueRange: options, id: uuidv4() }] })
               setDialog(<></>)
             }}>Ok</button>
           </div>
@@ -165,7 +180,7 @@ export default function EditRepertoire(props) {
             <button type='button' onClick={(e) => { e.preventDefault(); setDialog(<></>) }}>Cancel</button>
             <button type='button' onClick={(e) => {
               e.preventDefault()
-              setRepertoire(storage.saveRepertoire({ ...repertoire, categories: [...repertoire.categories, { type: 'stringMultiple', title: name, valueRange: options, id: uuidv4() }] }))
+              handleRepertoireChange({ ...repertoire, categories: [...repertoire.categories, { type: 'stringMultiple', title: name, valueRange: options, id: uuidv4() }] })
               setDialog(<></>)
             }}>Ok</button>
           </div>
@@ -183,7 +198,7 @@ export default function EditRepertoire(props) {
         addString(name, [])
         break
       case 2:
-        setRepertoire(storage.saveRepertoire({ ...repertoire, categories: [...repertoire.categories, { type: 'bool', title: name, valueRange: [true, false], id: uuidv4() }] }))
+        handleRepertoireChange({ ...repertoire, categories: [...repertoire.categories, { type: 'bool', title: name, valueRange: [true, false], id: uuidv4() }] })
         setDialog(<></>)
         break
       case 3:
@@ -196,13 +211,13 @@ export default function EditRepertoire(props) {
   }
 
   function addSong() {
-    setRepertoire(storage.saveRepertoire({ ...repertoire, songs: [...repertoire.songs, { title: '', length: 180, properties: {}, id: uuidv4() }] }))
+    handleRepertoireChange({ ...repertoire, songs: [...repertoire.songs, { title: '', length: 180, properties: {}, id: uuidv4() }] })
   }
 
   function updateTitle(id) {
     const title = document.getElementById(id + '-title').value
 
-    setRepertoire(storage.saveRepertoire({
+    handleRepertoireChange({
       ...repertoire,
       songs: repertoire.songs.map((song) => {
         if (song.id === id) {
@@ -213,13 +228,13 @@ export default function EditRepertoire(props) {
         }
         return song
       })
-    }))
+    })
   }
 
   function updateArtist(id) {
     const artist = document.getElementById(id + '-artist').value
 
-    setRepertoire(storage.saveRepertoire({
+    handleRepertoireChange({
       ...repertoire,
       songs: repertoire.songs.map((song) => {
         if (song.id === id) {
@@ -230,13 +245,13 @@ export default function EditRepertoire(props) {
         }
         return song
       })
-    }))
+    })
   }
 
   function updateNotes(id) {
     const notes = document.getElementById(id + '-notes').value
 
-    setRepertoire(storage.saveRepertoire({
+    handleRepertoireChange({
       ...repertoire,
       songs: repertoire.songs.map((song) => {
         if (song.id === id) {
@@ -247,7 +262,7 @@ export default function EditRepertoire(props) {
         }
         return song
       })
-    }))
+    })
   }
 
   function updateTime(id) {
@@ -270,7 +285,7 @@ export default function EditRepertoire(props) {
       }
     }
 
-    setRepertoire(storage.saveRepertoire({
+    handleRepertoireChange({
       ...repertoire,
       songs: repertoire.songs.map((song) => {
         if (song.id === id) {
@@ -281,7 +296,7 @@ export default function EditRepertoire(props) {
         }
         return song
       })
-    }))
+    })
   }
 
   function multipleStringSelect(cat, song) {
@@ -301,12 +316,12 @@ export default function EditRepertoire(props) {
             <button type='button' onClick={() => setDialog(<></>)}>Cancel</button>
             <button type='button' onClick={() => {
               let selectedList = []
-              for (let item of document.getElementsByClassName(cat.id + '-select')){
-                if(item.checked) {
+              for (let item of document.getElementsByClassName(cat.id + '-select')) {
+                if (item.checked) {
                   selectedList.push(item.name)
                 }
               }
-              setRepertoire(storage.saveRepertoire({
+              handleRepertoireChange({
                 ...repertoire,
                 songs: repertoire.songs.map((s) => {
                   if (s.id === song.id) {
@@ -314,7 +329,7 @@ export default function EditRepertoire(props) {
                   }
                   return s
                 })
-              }))
+              })
               setDialog(<></>)
             }}>Ok</button>
           </div>
@@ -327,24 +342,24 @@ export default function EditRepertoire(props) {
     switch (cat.type) {
       case 'bool':
         return (
-          <input defaultChecked={song.properties[cat.id]} id={song.id + '-' + cat.id} type='checkbox' onInput={() => {
+          <input checked={song.properties[cat.id]} id={song.id + '-' + cat.id} type='checkbox' onInput={() => {
             let input = document.getElementById(song.id + '-' + cat.id)
-            setRepertoire(storage.saveRepertoire({
+            handleRepertoireChange({
               ...repertoire,
               songs: repertoire.songs.map((s) => {
                 if (s.id === song.id) {
-                  s.properties[cat.id] = input.checked
+                  s.properties[cat.id] = !song.properties[cat.id]
                 }
                 return s
               })
-            }))
+            })
           }} />
         )
       case 'string':
         return (
-          <select defaultValue={song.properties[cat.id]} id={song.id + '-' + cat.id} onInput={() => {
+          <select value={song.properties[cat.id]} id={song.id + '-' + cat.id} onInput={() => {
             let input = document.getElementById(song.id + '-' + cat.id)
-            setRepertoire(storage.saveRepertoire({
+            handleRepertoireChange({
               ...repertoire,
               songs: repertoire.songs.map((s) => {
                 if (s.id === song.id) {
@@ -352,7 +367,7 @@ export default function EditRepertoire(props) {
                 }
                 return s
               })
-            }))
+            })
           }}>
             <option value=''>Select</option>
             {cat.valueRange.map((val) => <option key={val} value={val}>{val}</option>)}
@@ -366,9 +381,9 @@ export default function EditRepertoire(props) {
         )
       case 'number':
         return (
-          <input style={{ width: 100 }} defaultValue={song.properties[cat.id]} type='number' min={cat.valueRange[0]} max={cat.valueRange[cat.valueRange.length - 1]} id={song.id + '-' + cat.id} onInput={() => {
+          <input style={{ width: 100 }} value={song.properties[cat.id]} type='number' min={cat.valueRange[0]} max={cat.valueRange[cat.valueRange.length - 1]} id={song.id + '-' + cat.id} onInput={() => {
             let input = document.getElementById(song.id + '-' + cat.id)
-            setRepertoire(storage.saveRepertoire({
+            handleRepertoireChange({
               ...repertoire,
               songs: repertoire.songs.map((s) => {
                 if (s.id === song.id) {
@@ -376,7 +391,7 @@ export default function EditRepertoire(props) {
                 }
                 return s
               })
-            }))
+            })
           }} />
         )
       default:
@@ -394,9 +409,9 @@ export default function EditRepertoire(props) {
           <input id={song.id + '-artist'} type='text' placeholder='Artist' defaultValue={song.artist} onChange={() => updateArtist(song.id)} />
         </td>
         <td>
-          <input className='time' id={song.id + '-min'} type='number' min={0} max={59} defaultValue={Math.floor(song.length / 60)} onChange={() => updateTime(song.id)} />
+          <input className='time' id={song.id + '-min'} type='number' min={0} max={59} value={Math.floor(song.length / 60)} onChange={() => updateTime(song.id)} />
           m
-          <input className='time' id={song.id + '-sec'} type='number' min={-1} max={60} defaultValue={song.length % 60} onChange={() => updateTime(song.id)} />
+          <input className='time' id={song.id + '-sec'} type='number' min={-1} max={60} value={song.length % 60} onChange={() => updateTime(song.id)} />
           s
         </td>
         {repertoire.categories.filter((c) => c.show === undefined ? true : c.show).map((c) => {
@@ -410,7 +425,7 @@ export default function EditRepertoire(props) {
           <input id={song.id + '-notes'} type='text' placeholder='Notes' defaultValue={song.notes} onChange={() => updateNotes(song.id)} />
         </td>
         <td className='button' onClick={
-          () => setRepertoire(storage.saveRepertoire({ ...repertoire, songs: repertoire.songs.filter(({ id }) => id !== song.id) }))
+          () => handleRepertoireChange({ ...repertoire, songs: repertoire.songs.filter(({ id }) => id !== song.id) })
         }>
           ✘ Delete song
         </td>
@@ -443,7 +458,7 @@ export default function EditRepertoire(props) {
     setDialog(<></>)
   }
 
-  function io() {
+  function fileio() {
     setDialog(
       <dialog id='dialog' open>
         <u>Import / Export Repertoire</u>
@@ -469,7 +484,7 @@ export default function EditRepertoire(props) {
               )
               return
             }
-            setRepertoire(storage.saveRepertoire(newRepertoire))
+            handleRepertoireChange(newRepertoire)
             setDialog(<></>)
           }
 
@@ -503,10 +518,10 @@ export default function EditRepertoire(props) {
 
   function colorSelectDialog(id) {
     if (id.length === 0) {
-      setRepertoire(storage.saveRepertoire({
+      handleRepertoireChange({
         ...repertoire,
         color: null
-      }))
+      })
       setDialog(<></>)
       return
     }
@@ -526,13 +541,13 @@ export default function EditRepertoire(props) {
               let input = document.getElementById(id + '-' + vals[i])
               colors[vals[i]] = input.value
             }
-            setRepertoire(storage.saveRepertoire({
+            handleRepertoireChange({
               ...repertoire,
               color: {
                 category: id,
                 colors: colors
               }
-            }))
+            })
             setDialog(<></>)
           }}>
             Ok
@@ -564,31 +579,31 @@ export default function EditRepertoire(props) {
   }
 
   function sortByName(asc) {
-    setRepertoire(storage.saveRepertoire({
+    handleRepertoireChange({
       ...repertoire,
       songs: byName(repertoire.songs, asc)
-    }))
+    })
   }
 
   function sortByArtist(asc) {
-    setRepertoire(storage.saveRepertoire({
+    handleRepertoireChange({
       ...repertoire,
       songs: byArtist(repertoire.songs, asc)
-    }))
+    })
   }
 
   function sortByLength(asc) {
-    setRepertoire(storage.saveRepertoire({
+    handleRepertoireChange({
       ...repertoire,
       songs: byLength(repertoire.songs, asc)
-    }))
+    })
   }
 
   function sortByCat(asc, id) {
-    setRepertoire(storage.saveRepertoire({
+    handleRepertoireChange({
       ...repertoire,
       songs: byCat(repertoire.songs, asc, repertoire.categories.find((c) => c.id === id))
-    }))
+    })
   }
 
   let leftButton = (
@@ -611,16 +626,16 @@ export default function EditRepertoire(props) {
             let x = e.clientX
             let headers = document.getElementsByClassName('categoryHeader')
             if (headers.length === 0 || x < headers[0].getBoundingClientRect().left) {
-              setRepertoire(storage.saveRepertoire({ ...repertoire, categories: [repertoire.categories.find((c) => c.id === id), ...repertoire.categories.filter((c) => c.id !== id)] }))
+              handleRepertoireChange({ ...repertoire, categories: [repertoire.categories.find((c) => c.id === id), ...repertoire.categories.filter((c) => c.id !== id)] })
             } else if (x > headers[headers.length - 1].getBoundingClientRect().right) {
-              setRepertoire(storage.saveRepertoire({ ...repertoire, categories: [...repertoire.categories.filter((c) => c.id !== id), repertoire.categories.find((c) => c.id === id)] }))
+              handleRepertoireChange({ ...repertoire, categories: [...repertoire.categories.filter((c) => c.id !== id), repertoire.categories.find((c) => c.id === id)] })
             } else {
               for (let i = 0; i < repertoire.categories.length; i++) {
                 if (id === repertoire.categories[i].id) {
                   continue
                 }
                 let rect = document.getElementById(repertoire.categories[i].id)?.getBoundingClientRect()
-                if(rect === undefined) {
+                if (rect === undefined) {
                   continue
                 }
                 if (x >= rect.left && x <= rect.right) {
@@ -628,12 +643,12 @@ export default function EditRepertoire(props) {
                     let otherCatsL = repertoire.categories.slice(0, i).filter((c) => c.id !== id)
                     let cat = repertoire.categories.find((c) => c.id === id)
                     let otherCatsR = repertoire.categories.slice(i).filter((c) => c.id !== id)
-                    setRepertoire(storage.saveRepertoire({ ...repertoire, categories: [...otherCatsL, cat, ...otherCatsR] }))
+                    handleRepertoireChange({ ...repertoire, categories: [...otherCatsL, cat, ...otherCatsR] })
                   } else {
                     let otherCatsL = repertoire.categories.slice(0, i + 1).filter((c) => c.id !== id)
                     let cat = repertoire.categories.find((c) => c.id === id)
                     let otherCatsR = repertoire.categories.slice(i + 1).filter((c) => c.id !== id)
-                    setRepertoire(storage.saveRepertoire({ ...repertoire, categories: [...otherCatsL, cat, ...otherCatsR] }))
+                    handleRepertoireChange({ ...repertoire, categories: [...otherCatsL, cat, ...otherCatsR] })
                   }
                 }
               }
@@ -700,12 +715,12 @@ export default function EditRepertoire(props) {
                 let otherSongsT = repertoire.songs.slice(0, i).filter((s) => s.id !== id)
                 let song = repertoire.songs.find((s) => s.id === id)
                 let otherSongsB = repertoire.songs.slice(i).filter((s) => s.id !== id)
-                setRepertoire(storage.saveRepertoire({ ...repertoire, songs: [...otherSongsT, song, ...otherSongsB] }))
+                handleRepertoireChange({ ...repertoire, songs: [...otherSongsT, song, ...otherSongsB] })
               } else {
                 let otherSongsT = repertoire.songs.slice(0, i + 1).filter((s) => s.id !== id)
                 let song = repertoire.songs.find((s) => s.id === id)
                 let otherSongsB = repertoire.songs.slice(i + 1).filter((s) => s.id !== id)
-                setRepertoire(storage.saveRepertoire({ ...repertoire, songs: [...otherSongsT, song, ...otherSongsB] }))
+                handleRepertoireChange({ ...repertoire, songs: [...otherSongsT, song, ...otherSongsB] })
               }
             }
           }
@@ -719,7 +734,7 @@ export default function EditRepertoire(props) {
       <div onClick={colorDialog} className='button'>
         Associate Color
       </div>
-      <div onClick={io} className='button'>
+      <div onClick={fileio} className='button'>
         Import / Export Repertoire
       </div>
       <div className='info'>
@@ -731,22 +746,21 @@ export default function EditRepertoire(props) {
         Show categories:
         <br />
         {repertoire.categories.map((c) => (
-          <div key={'categoryShowSelect-' + c.id} ><input defaultChecked={c.show === undefined ? true : c.show} id={'showCategoryCheckBox-' + c.id} type='checkbox' onInput={() => {
-            const input = document.getElementById('showCategoryCheckBox-' + c.id)
+          <div key={'categoryShowSelect-' + c.id} ><input checked={c.show === undefined ? true : c.show} id={'showCategoryCheckBox-' + c.id} type='checkbox' onChange={(e) => {
             let newCategories = repertoire.categories.map((cat) => {
               if (cat.id === c.id) {
                 return {
                   ...cat,
-                  show: input.checked
+                  show: e.target.checked
                 }
               }
               return cat
             })
-            setRepertoire(storage.saveRepertoire({
+            handleRepertoireChange({
               ...repertoire,
               categories: newCategories
-            }))
-          }}/>{c.title}</div>
+            })
+          }} />{c.title}</div>
         ))}
         {/* {JSON.stringify(repertoire, null, 2)} */}
       </div>

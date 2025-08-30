@@ -11,3 +11,19 @@
     flex-direction: row;
     justify-content: space-between;
 }
+
+.loginPrompt {
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 80vh;
+    font-size: xx-large;
+    font-weight: bold;
+}
+
+.loginLink {
+    text-decoration: underline;
+    cursor: pointer;
+}

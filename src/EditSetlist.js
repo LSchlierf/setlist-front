@@ -10,75 +10,109 @@ import { BlobProvider } from '@react-pdf/renderer'
 import SetlistSimplePDF from './SetlistSimplePDF'
 import SetlistDetailedPDF from './SetlistDetailedPDF'
 
+const DEFAULT_REPERTOIRE = { categories: [], songs: [] }
+const DEFAULT_SETLIST = { concert: 'new setlist', sets: [], encore: [], breaks: { len: 20, buffer: 5 }, startTime: '19:30', timeFixed: 'start' }
+
 export default function EditSetlist() {
-  let fullRepertoire = storage.getRepertoire()
-  const [dialog, setDialog] = useState(<></>)
-  const [lastTime, setLastTime] = useState('start')
-  const [repertoireDragging, setRepertoireDragging] = useState(false)
-
-  function updateSetlist(setlist) {
-    return {
-      ...setlist,
-      sets: setlist.sets.map((set) => set.map((song) => fullRepertoire.songs.find((s) => s.id === song.id))),
-      encore: setlist.encore.map((song) => fullRepertoire.songs.find((s) => s.id === song.id))
-    }
-  }
-
-  let { state } = useLocation()
   let navigate = useNavigate()
-  const id = state
-  const [setlist, setSetlist] = useState(storage.updateSetlist(id, updateSetlist(storage.getSetlist(id))))
-  const [repertoire, setRepertoire] = useState({
-    ...fullRepertoire,
-    songs: fullRepertoire.songs.filter((s) => ([...setlist.sets.flat(), ...setlist.encore].find((t) => t?.id === s.id) === undefined))
-  })
-  const [categories, setCategories] = useState(Object.fromEntries(fullRepertoire.categories.map((c) => [c.id, (c.show === undefined ? true : c.show)])))
+  let { state } = useLocation()
+  const { id, concert } = state
+
+  const [fullRepertoire, setFullRepertoire] = useState(DEFAULT_REPERTOIRE)
+  const [dialog, setDialog] = useState(<></>)
+  const [endTime, setEndTime] = useState('')
+  const [repertoireDragging, setRepertoireDragging] = useState(false)
+  const [setlist, setSetlist] = useState(DEFAULT_SETLIST)
+  const [repertoire, setRepertoire] = useState(DEFAULT_REPERTOIRE)
+  const [categories, setCategories] = useState([])
   const [lastSort, setLastSort] = useState({ func: sortByName, asc: true, cat: null })
+  const [newSetSong, setNewSetSong] = useState()
+  const [draggingID, setDraggingID] = useState('')
+  const [draggingFrom, setDraggingFrom] = useState('')
+
+  function handleSocketInput(newSetlist) {
+    if (newSetlist.id !== id) return;
+    setSetlist(newSetlist.data)
+    setEndTime(newSetlist.endTime)
+  }
 
   useEffect(() => {
-    if (lastTime === 'start') {
-      startTimeInput()
-    } else {
-      endTimeInput()
+    storage.init().then(() => {
+      storage.getRepertoire().then(r => {
+        setFullRepertoire(r)
+      })
+      storage.getSetlist(id).then(s => {
+        setSetlist(s)
+        setEndTime(calculateEndTime(s.startTime, s.breaks, s.sets, s.encore))
+      })
+      storage.socket?.on('setlist', handleSocketInput)
+    })
+    return () => {
+      storage.socket?.off('setlist', handleSocketInput)
     }
-  }, [setlist.sets, setlist.encore, setlist.breaks.len, setlist.breaks.buffer, lastTime])
+  }, [])
 
-  let leftButton = (
-    <div onClick={() => navigate('/')} className='button'>
-      Back
-    </div>
-  )
+  useEffect(() => {
+    setRepertoire({
+      ...fullRepertoire,
+      songs: fullRepertoire.songs.filter((s) => ([...setlist.sets.flat(), ...setlist.encore, newSetSong].find((t) => t?.id === s.id) === undefined))
+    })
+    lastSort.func(lastSort.asc, lastSort.cat)
+  }, [fullRepertoire, JSON.stringify(setlist.sets), JSON.stringify(setlist.encore)])
 
-  function sortByName(asc, rep) {
+  useEffect(() => {
+    setCategories(Object.fromEntries(fullRepertoire.categories.map((c) => [c.id, (c.show === undefined ? true : c.show)])))
+  }, [fullRepertoire])
+
+  useEffect(() => {
+    revalidateTimes()
+  }, [JSON.stringify(setlist.breaks), JSON.stringify(setlist.sets), JSON.stringify(setlist.encore)])
+
+  function revalidateTimes() {
+    if (setlist.timeFixed == 'end') {
+      endTimeUpdate()
+    } else {
+      startTimeUpdate()
+    }
+  }
+
+  function handleSetlistChange(updater) {
+    setSetlist(updater)
+    const newSetlist = updater(setlist)
+    const newEndTime = newSetlist.timeFixed === 'start' ? calculateEndTime(newSetlist.startTime, newSetlist.breaks, newSetlist.sets, newSetlist.encore) : endTime
+    storage.socket?.emit('setlist', { id: id, data: newSetlist, endTime: newEndTime })
+  }
+
+  function sortByName(asc) {
     setLastSort({ func: sortByName, asc: asc, cat: null })
-    setRepertoire({
-      ...rep,
-      songs: byName(rep.songs, asc)
-    })
+    setRepertoire(r => ({
+      ...r,
+      songs: byName(r.songs, asc)
+    }))
   }
 
-  function sortByArtist(asc, rep) {
+  function sortByArtist(asc) {
     setLastSort({ func: sortByArtist, asc: asc, cat: null })
-    setRepertoire({
-      ...rep,
-      songs: byArtist(rep.songs, asc)
-    })
+    setRepertoire(r => ({
+      ...r,
+      songs: byArtist(r.songs, asc)
+    }))
   }
 
-  function sortByLength(asc, rep) {
+  function sortByLength(asc) {
     setLastSort({ func: sortByLength, asc: asc, cat: null })
-    setRepertoire({
-      ...rep,
-      songs: byLength(rep.songs, asc)
-    })
+    setRepertoire(r => ({
+      ...r,
+      songs: byLength(r.songs, asc)
+    }))
   }
 
-  function sortByCat(asc, rep, cat) {
+  function sortByCat(asc, cat) {
     setLastSort({ func: sortByCat, asc: asc, cat: cat })
-    setRepertoire({
-      ...rep,
-      songs: byCat(rep.songs, asc, cat)
-    })
+    setRepertoire(r => ({
+      ...r,
+      songs: byCat(r.songs, asc, cat)
+    }))
   }
 
   function catDisplay(song, cat) {
@@ -95,11 +129,172 @@ export default function EditSetlist() {
     }
   }
 
-  function songRow(from) {
+  function startDragging(from, id) { // @TODO: repertoire sort on start drag
+    return () => {
+      setDraggingFrom(from)
+      setDraggingID(id)
+
+      const makeSongDragged = (id) => (song) => {
+        if (song.id !== id) return song;
+
+        return {
+          ...song,
+          dragged: true
+        }
+      }
+
+      if ('repertoire' === from) {
+        setRepertoire(r => ({
+          ...r,
+          songs: r.songs.map(makeSongDragged(id))
+        }))
+      }
+
+      let newSets = [...setlist.sets]
+      let newEncore = [...setlist.encore]
+
+      if ('encore' === from) {
+        newEncore = newEncore.map(makeSongDragged(id))
+      }
+
+      else if (from.startsWith('set-')) {
+        const setIndex = Number(from.substring(4))
+        newSets[setIndex] = newSets[setIndex].map(makeSongDragged(id))
+      }
+
+      setSetlist({
+        ...setlist,
+        sets: newSets,
+        encore: newEncore
+      })
+    }
+  }
+
+  function dragOver(to) {
+    return (e) => {
+      e.preventDefault()
+
+      const from = draggingFrom
+      const id = draggingID
+
+      if ('repretoire' === from) return;
+
+      let song = {
+        ...fullRepertoire.songs.filter(s => s.id === id)[0],
+        dragged: true
+      };
+
+      let newIndex = 0
+
+      let newEncore = [...setlist.encore]
+      let newSets = [...setlist.sets]
+
+      const elements = document.getElementsByClassName(to)
+
+      // determine new pos
+      for (let el of elements) {
+        if (el.getBoundingClientRect().bottom > e.clientY) break;
+        newIndex++;
+      }
+
+      // remove previous dummy song
+      const removeActualSong = (array) => {
+        return array.filter(s => s.id !== id)
+      }
+
+      newEncore = removeActualSong(newEncore)
+      newSets = [...newSets.map(removeActualSong)]
+
+      // add dummy song
+      const addSong = (array) => {
+        return [...array.slice(0, newIndex), song, ...array.slice(newIndex)]
+      }
+
+      if ('encore' === to) {
+        newEncore = addSong(newEncore)
+      }
+
+      if ('newSet' === to) {
+        setNewSetSong(song)
+      } else {
+        setNewSetSong()
+      }
+
+      if (to.startsWith('set-')) {
+        const setIndex = Number(to.substring(4))
+        newSets[setIndex] = addSong(newSets[setIndex])
+      }
+
+      setSetlist({
+        ...setlist,
+        sets: newSets,
+        encore: newEncore
+      })
+
+    }
+  }
+
+  function dropSong(to) {
+    return (e) => {
+      e.preventDefault()
+      const from = draggingFrom
+      const id = draggingID
+
+      setDraggingFrom('')
+      setDraggingID('')
+
+      const removeDraggedTag = song => {
+        let newSong = song;
+        delete newSong.dragged;
+        return newSong;
+      }
+
+      if ('repertoire' === to) {
+        if (to === from) return;
+
+        let newSets = [...setlist.sets]
+        let newEncore = [...setlist.encore]
+
+        if ('encore' === from) {
+          newEncore = newEncore.filter(s => s.id !== id)
+        }
+
+        if (from.startsWith('set-')) {
+          let setIndex = Number(from.substring(4))
+          newSets[setIndex] = newSets[setIndex].filter(s => s.id !== id)
+        }
+
+        handleSetlistChange(s => ({
+          ...s,
+          encore: newEncore,
+          sets: newSets
+        }))
+
+      } else if ('newSet' === to) {
+
+        setNewSetSong()
+        handleSetlistChange(s => ({
+          ...s,
+          sets: [...s.sets, [removeDraggedTag(newSetSong)]]
+        }))
+
+      } else {
+
+        handleSetlistChange(s => ({
+          ...s,
+          encore: s.encore.map(removeDraggedTag),
+          sets: [...s.sets.map(set => set.map(removeDraggedTag))]
+        }))
+
+      }
+    }
+  }
+
+  function songRow(set) {
     return (song) => {
       let backgroundColor = repertoire.color?.colors[song.properties[repertoire.color?.category]]
       return (
-        <tr key={song.id} className={from + ' ' + song.id} style={{ backgroundColor: backgroundColor, color: backgroundColor ? 'black' : null }} draggable='true' onDragStart={(e) => { e.dataTransfer.setData('id', song.id); e.dataTransfer.setData('from', from) }}>
+        <tr key={song.id} className={set + ' ' + song.id + (song.dragged ? ' dragged' : '')} style={{ backgroundColor: backgroundColor, color: backgroundColor ? 'black' : null }} draggable='true' onDragStart={startDragging(set, song.id)}>
           <td>
             {song.title}
           </td>
@@ -132,96 +327,43 @@ export default function EditSetlist() {
     return Math.ceil(sum / 60 / 5) * 5
   }
 
-  function concertDurationMinutes(breaks) {
-    let setLengths = [...setlist.sets, setlist.encore].map((set) => Math.ceil(set.reduce((a, s) => a + s.length, 0) / 60 / 5) * 5)
+  function concertDurationMinutes(breaks, sets, encore) {
+    let setLengths = [...sets, encore].map((set) => Math.ceil(set.reduce((a, s) => a + s.length, 0) / 60 / 5) * 5)
     let sum = (setLengths.reduce((a, s) => a + s, 0) * 60) + (breaks * 60)
     return Math.ceil(sum / 60)
   }
 
+  function songTableHead() {
+    return (<thead>
+      <tr>
+        <th>Title</th>
+        <th>Artist</th>
+        <th>Length</th>
+        {repertoire.categories.filter((c) => categories[c.id]).map((c) =>
+          <th key={c.id}>{c.title}</th>
+        )}
+        <th>Notes</th>
+      </tr>
+    </thead>)
+  }
+
   function setDisplay(set, index) {
     return (
-      <div key={index} className='singleSet' onDragOver={(e) => e.preventDefault()} onDrop={(e) => {
-        let songID = e.dataTransfer.getData('id')
-        let from = e.dataTransfer.getData('from')
-        let newSets = setlist.sets
-        let song = fullRepertoire.songs.find((s) => s.id === songID)
-        let newEncore = setlist.encore
-        if (from === 'repertoire') {
-          setRepertoire({
-            ...repertoire,
-            songs: repertoire.songs.filter((s) => s.id !== songID)
-          })
-        } else if (from.startsWith('set-')) {
-          let setIndex = Number(from.substring(4))
-          newSets = [...newSets.slice(0, setIndex), newSets[setIndex].filter((s) => s.id !== songID), ...newSets.slice(setIndex + 1)]
-        } else if (from === 'encore') {
-          newEncore = newEncore.filter((s) => s.id !== songID)
-        }
-        let newSet = set.filter((s) => s.id !== songID)
-        let y = e.clientY
-        let songs = document.getElementsByClassName('set-' + index)
-        if (songs.length === 0 || y < songs[0].getBoundingClientRect().top) {
-          newSets = [...newSets.slice(0, index), [song, ...newSet], ...newSets.slice(index + 1)]
-        } else if (y > songs[songs.length - 1].getBoundingClientRect().bottom) {
-          newSets = [...newSets.slice(0, index), [...newSet, song], ...newSets.slice(index + 1)]
-        } else {
-          for (let i = 0; i < songs.length; i++) {
-            let top = songs[i].getBoundingClientRect().top
-            let bottom = songs[i].getBoundingClientRect().bottom
-            if (y >= top && y <= bottom) {
-              if (y - top < bottom - y) {
-                newSets = [...newSets.slice(0, index), [...newSet.slice(0, i), song, ...newSet.slice(i)], ...newSets.slice(index + 1)]
-              } else {
-                newSets = [...newSets.slice(0, index), [...newSet.slice(0, i + 1), song, ...newSet.slice(i + 1)], ...newSets.slice(index + 1)]
-              }
-            }
-          }
-        }
-        setSetlist(storage.updateSetlist(id, {
-          ...setlist,
-          sets: newSets,
-          encore: newEncore
-        }))
-      }}>
+      <div key={'set-' + index} className='singleSet' onDragOver={dragOver('set-' + index)} onDrop={dropSong('set-' + index)}>
         <div className='singleSetHead'>
           Set {index + 1}
           <div className='button' onClick={() => {
             let newSets = [...setlist.sets.slice(0, index), ...setlist.sets.slice(index + 1)]
-            let newRep = {
-              ...repertoire,
-              songs: [...repertoire.songs, ...set]
-            }
-            setSetlist(storage.updateSetlist(id, {
-              ...setlist,
+            handleSetlistChange(s => ({
+              ...s,
               sets: newSets
             }))
-            lastSort.func(lastSort.asc, newRep, lastSort.cat)
           }}>
             ✘ Delete set
           </div>
         </div>
         <table>
-          <thead>
-            <tr>
-              <th>
-                Title
-              </th>
-              <th>
-                Artist
-              </th>
-              <th>
-                Length
-              </th>
-              {repertoire.categories.filter((c) => categories[c.id]).map((c) =>
-                <th key={c.id}>
-                  {c.title}
-                </th>
-              )}
-              <th>
-                Notes
-              </th>
-            </tr>
-          </thead>
+          {songTableHead()}
           <tbody>
             {set.map(songRow('set-' + index))}
           </tbody>
@@ -233,180 +375,112 @@ export default function EditSetlist() {
     )
   }
 
-  function startTimeInput() {
-    const start = document.getElementById('startTime')
-    const startH = Number(start.value.split(':')[0])
-    const startM = Number(start.value.split(':')[1])
-    const end = document.getElementById('endTime')
-    const minutes = concertDurationMinutes(((setlist.breaks?.len || 0) * (Math.max(setlist.sets?.length - 1, 0) || 0)) + ((setlist.breaks?.buffer || 0) * (setlist.sets?.length)))
-    const endMinutes = ((startH * 60) + startM + minutes) % 1440
-    setSetlist(storage.updateSetlist(id, {
-      ...setlist,
-      startTime: start.value
+  function startTimeInput(e) {
+    setEndTime(calculateEndTime(e.target.value, setlist.breaks, setlist.sets, setlist.encore))
+    handleSetlistChange(s => ({
+      ...s,
+      startTime: e.target.value,
+      timeFixed: 'start'
     }))
-    end.value = ('0' + (Math.floor(endMinutes / 60))).slice(-2) + ':' + ('0' + (endMinutes % 60)).slice(-2)
   }
 
-  function endTimeInput() {
-    const start = document.getElementById('startTime')
-    const end = document.getElementById('endTime')
-    const endH = Number(end.value.split(':')[0])
-    const endM = Number(end.value.split(':')[1])
-    const minutes = concertDurationMinutes(((setlist.breaks?.len || 0) * (Math.max(setlist.sets?.length - 1, 0) || 0)) + ((setlist.breaks?.buffer || 0) * (setlist.sets?.length)))
+  function startTimeUpdate() {
+    setEndTime(getEndTime())
+  }
+
+  function endTimeInput(e) {
+    const endH = Number(e.target.value.split(':')[0])
+    const endM = Number(e.target.value.split(':')[1])
+    const minutes = concertDurationMinutes(((setlist.breaks?.len || 0) * (Math.max(setlist.sets?.length - 1, 0) || 0)) + ((setlist.breaks?.buffer || 0) * (setlist.sets?.length)), setlist.sets, setlist.encore)
     const startMinutes = ((((endH * 60) + endM) + 1440) - minutes) % 1440
     const startVal = ('0' + (Math.floor(startMinutes / 60))).slice(-2) + ':' + ('0' + (startMinutes % 60)).slice(-2)
-    setSetlist(storage.updateSetlist(id, {
-      ...setlist,
-      startTime: startVal
+    handleSetlistChange(s => ({
+      ...s,
+      startTime: startVal,
+      timeFixed: 'end'
     }))
-    start.value = startVal
   }
 
-  const trackMove = (e) => {
-    if(!repertoireDragging) return
+  function endTimeUpdate() {
+    const endH = Number(endTime.split(':')[0])
+    const endM = Number(endTime.split(':')[1])
+    const minutes = concertDurationMinutes(((setlist.breaks?.len || 0) * (Math.max(setlist.sets?.length - 1, 0) || 0)) + ((setlist.breaks?.buffer || 0) * (setlist.sets?.length)), setlist.sets, setlist.encore)
+    const startMinutes = ((((endH * 60) + endM) + 1440) - minutes) % 1440
+    const startVal = ('0' + (Math.floor(startMinutes / 60))).slice(-2) + ':' + ('0' + (startMinutes % 60)).slice(-2)
+    handleSetlistChange(s => ({
+      ...s,
+      startTime: startVal,
+      timeFixed: 'end'
+    }))
+  }
+
+  function calculateEndTime(startTime, breaks, sets, encore) {
+    const startH = Number(startTime.split(':')[0])
+    const startM = Number(startTime.split(':')[1])
+    const minutes = concertDurationMinutes(((breaks?.len || 0) * (Math.max(sets?.length - 1, 0) || 0)) + ((breaks?.buffer || 0) * (sets?.length)), sets, encore)
+    const endMinutes = ((startH * 60) + startM + minutes) % 1440
+    return ('0' + (Math.floor(endMinutes / 60))).slice(-2) + ':' + ('0' + (endMinutes % 60)).slice(-2)
+  }
+
+  function getEndTime() {
+    return calculateEndTime(setlist.startTime || '19:30', setlist.breaks, setlist.sets, setlist.encore)
+  }
+
+  let leftButton = (
+    <div onClick={() => navigate('/')} className='button'>
+      Back
+    </div>
+  )
+
+  function trackRepertoireSizeMove(e) {
+    if (!repertoireDragging) return
     let newWidth = window.innerWidth - e.clientX + 4
     const bank = document.getElementById('repertoireBank')
     bank.style.width = newWidth + 'px'
   }
 
   return (
-    <div className='pageContainer' onMouseMove={trackMove} onPointerMove={trackMove} onMouseUp={() => {
+    <div className='pageContainer' onMouseMove={trackRepertoireSizeMove} onPointerMove={trackRepertoireSizeMove} onMouseUp={() => {
       setRepertoireDragging(false)
     }} onPointerUp={() => {
       setRepertoireDragging(false)
     }} >
       <Header title='Edit setlist' leftButton={leftButton} />
+
       {dialog}
+
       <div className='setlistBank'>
-        <input id='concertTitle' type='text' defaultValue={setlist.concert} onInput={() => {
+        <input id='concertTitle' type='text' value={setlist.concert} onInput={() => {
           const input = document.getElementById('concertTitle')
-          setSetlist(storage.updateSetlist(id, {
-            ...setlist,
+          handleSetlistChange(s => ({
+            ...s,
             concert: input.value
           }))
+          storage.socket.emit('setlists')
         }} />
+
         {setlist.sets.map(setDisplay)}
-        <div className='newSet' onDragOver={(e) => e.preventDefault()} onDrop={(e) => {
-          const songID = e.dataTransfer.getData('id')
-          const from = e.dataTransfer.getData('from')
-          const song = fullRepertoire.songs.find((s) => s.id === songID)
-          if (from === 'repertoire') {
-            setRepertoire({
-              ...repertoire,
-              songs: repertoire.songs.filter((s) => s.id !== songID)
-            })
-            setSetlist(storage.updateSetlist(id, {
-              ...setlist,
-              sets: [...setlist.sets, [song]]
-            }))
-          } else if (from.startsWith('set-')) {
-            let set = Number(from.substring(4))
-            setSetlist(storage.updateSetlist(id, {
-              ...setlist,
-              sets: [...setlist.sets.slice(0, set), setlist.sets[set].filter((s) => s.id !== songID), ...setlist.sets.slice(set + 1), [song]]
-            }))
-          }
-        }}>
-          + Drag a song here to add a set
+
+        <div className='singleSet newSet' onDragOver={dragOver('newSet')} onDrop={dropSong('newSet')}>
+          <div className='newSetHead'>
+            + Drag a song here to add a set
+          </div>
+          {newSetSong ?
+            <table>
+              {songTableHead()}
+              <tbody>
+                {songRow('newSet')(newSetSong)}
+              </tbody>
+            </table>
+            : <></>}
         </div>
-        <div className='singleSet' onDragOver={(e) => e.preventDefault()} onDrop={(e) => {
-          e.preventDefault()
-          const songID = e.dataTransfer.getData('id')
-          const from = e.dataTransfer.getData('from')
-          const song = fullRepertoire.songs.find((s) => s.id === songID)
-          let newEncore = setlist.encore
-          if (from === 'encore') { // moving song within encore
-            const songs = document.getElementsByClassName('encore')
-            const y = e.clientY
-            if (songs.length === 0 || y < songs[0].getBoundingClientRect().top) {
-              newEncore = [song, ...newEncore.filter((s) => s.id !== songID)]
-            } else if (y > songs[songs.length - 1].getBoundingClientRect().bottom) {
-              newEncore = [...newEncore.filter((s) => s.id !== songID), song]
-            } else {
-              for (let i = 0; i < songs.length; i++) {
-                let top = songs[i].getBoundingClientRect().top
-                let bottom = songs[i].getBoundingClientRect().bottom
-                if (songs[i].classList.contains(songID)) {
-                  continue
-                }
-                if (y >= top && y <= bottom) {
-                  newEncore = newEncore.filter((s) => s.id !== songID)
-                  if (y - top < bottom - y) {
-                    newEncore = [...newEncore.slice(0, i), song, ...newEncore.slice(i)]
-                  } else {
-                    newEncore = [...newEncore.slice(0, i + 1), song, ...newEncore.slice(i + 1)]
-                  }
-                  break
-                }
-              }
-            }
-            setSetlist(storage.updateSetlist(id, {
-              ...setlist,
-              encore: newEncore
-            }))
-            return
-          }
-          let newSets = setlist.sets
-          if (from === 'repertoire') {
-            setRepertoire({
-              ...repertoire,
-              songs: repertoire.songs.filter((s) => s.id !== songID)
-            })
-          } else if (from.startsWith('set-')) {
-            const setIndex = Number(from.substring(4))
-            newSets = [...newSets.slice(0, setIndex), newSets[setIndex].filter((s) => s.id !== songID), ...newSets.slice(setIndex + 1)]
-          }
-          const songs = document.getElementsByClassName('encore')
-          const y = e.clientY
-          if (songs.length === 0 || y < songs[0].getBoundingClientRect().top) {
-            newEncore = [song, ...newEncore]
-          } else if (y > songs[songs.length - 1].getBoundingClientRect().bottom) {
-            newEncore = [...newEncore, song]
-          } else {
-            for (let i = 0; i < songs.length; i++) {
-              let top = songs[i].getBoundingClientRect().top
-              let bottom = songs[i].getBoundingClientRect().bottom
-              if (y >= top && y <= bottom) {
-                if (y - top < bottom - y) {
-                  newEncore = [...newEncore.slice(0, i), song, ...newEncore.slice(i)]
-                } else {
-                  newEncore = [...newEncore.slice(0, i + 1), song, ...newEncore.slice(i + 1)]
-                }
-                break
-              }
-            }
-          }
-          setSetlist(storage.updateSetlist(id, {
-            ...setlist,
-            sets: newSets,
-            encore: newEncore
-          }))
-        }}>
+        
+        <div className='singleSet' onDragOver={dragOver('encore')} onDrop={dropSong('encore')}>
           <div className='singleSetHead'>
             Encore
           </div>
           <table>
-            <thead>
-              <tr>
-                <th>
-                  Title
-                </th>
-                <th>
-                  Artist
-                </th>
-                <th>
-                  Length
-                </th>
-                {repertoire.categories.filter((c) => categories[c.id]).map((c) =>
-                  <th key={c.id}>
-                    {c.title}
-                  </th>
-                )}
-                <th>
-                  Notes
-                </th>
-              </tr>
-            </thead>
+            {songTableHead()}
             <tbody>
               {setlist.encore.map(songRow('encore'))}
             </tbody>
@@ -415,28 +489,29 @@ export default function EditSetlist() {
             {setlist.encore.length} Songs, ~{setLengthApprox(setlist.encore)} min, {setLength(setlist.encore)}
           </div>
         </div>
+
         <div className='info'>
           Total songs: {[...setlist.encore, ...setlist.sets.flat()].length}
           <br />
           Raw length (without breaks / buffer): <b><u>{setLength([...setlist.encore, ...setlist.sets.flat()])}</u></b>
           <br />
-          <input id='breaksLen' type='number' defaultValue={setlist.breaks?.len} min={0} max={60} style={{ width: 50 }} onInput={() => {
+          <input id='breaksLen' type='number' value={setlist.breaks?.len} min={0} max={60} style={{ width: 50 }} onInput={() => {
             const input = document.getElementById('breaksLen')
-            setSetlist(storage.updateSetlist(id, {
-              ...setlist,
+            handleSetlistChange(s => ({
+              ...s,
               breaks: {
-                ...setlist.breaks,
+                ...s.breaks,
                 len: Number(input.value)
               }
             }))
           }} /> minute break after each set (except last set)
           <br />
-          <input id='breaksBuffer' type='number' defaultValue={setlist.breaks?.buffer} min={0} max={60} style={{ width: 50 }} onInput={() => {
+          <input id='breaksBuffer' type='number' value={setlist.breaks?.buffer} min={0} max={60} style={{ width: 50 }} onInput={() => {
             const input = document.getElementById('breaksBuffer')
-            setSetlist(storage.updateSetlist(id, {
-              ...setlist,
+            handleSetlistChange(s => ({
+              ...s,
               breaks: {
-                ...setlist.breaks,
+                ...s.breaks,
                 buffer: Number(input.value)
               }
             }))
@@ -444,23 +519,15 @@ export default function EditSetlist() {
           <br />
           Total length (with breaks & buffer): <b><u>{
             function () {
-              let length = concertDurationMinutes(((setlist.breaks?.len || 0) * (Math.max(setlist.sets?.length - 1, 0) || 0)) + ((setlist.breaks?.buffer || 0) * (setlist.sets?.length)))
+              let length = concertDurationMinutes(((setlist.breaks?.len || 0) * (Math.max(setlist.sets?.length - 1, 0) || 0)) + ((setlist.breaks?.buffer || 0) * (setlist.sets?.length)), setlist.sets, setlist.encore)
               return Math.floor(length / 60) + 'h ' + (length % 60) + 'm'
             }()
           }</u></b>
           <br />
-          Start time: <input defaultValue={setlist.startTime || '19:30'} id='startTime' type='time' onInput={() => {setLastTime('start'); startTimeInput()}} />,
-          End time: <input id='endTime' type='time' onInput={() => {setLastTime('end'); endTimeInput()}} defaultValue={
-            function () {
-              const startTime = setlist.startTime || '19:30'
-              const startH = Number(startTime.split(':')[0])
-              const startM = Number(startTime.split(':')[1])
-              const minutes = concertDurationMinutes(((setlist.breaks?.len || 0) * (Math.max(setlist.sets?.length - 1, 0) || 0)) + ((setlist.breaks?.buffer || 0) * (setlist.sets?.length)))
-              const endMinutes = ((startH * 60) + startM + minutes) % 1440
-              return ('0' + (Math.floor(endMinutes / 60))).slice(-2) + ':' + ('0' + (endMinutes % 60)).slice(-2)
-            }()
-          } />
+          Start time: <input value={setlist.startTime || '19:30'} id='startTime' type='time' onChange={e => setSetlist(s => ({ ...s, startTime: e.target.value }))} onBlur={startTimeInput} />,
+          End time: <input id='endTime' type='time' onChange={e => setEndTime(e.target.value)} onBlur={endTimeInput} value={endTime} />
         </div>
+
         <div className='info'>
           Select categories to display:
           <br />
@@ -475,6 +542,7 @@ export default function EditSetlist() {
             </div>
           ))}
         </div>
+
         <div className='button' onClick={() => {
           setDialog(
             <dialog open id='dialog'>
@@ -555,36 +623,15 @@ export default function EditSetlist() {
         }} >
           Export setlist
         </div>
+
         <div className='debug'>
           {/* {JSON.stringify(categories)} */}
           {/* {JSON.stringify(setlist)} */}
+          {/* {JSON.stringify(repertoire)} */}
         </div>
       </div>
 
-      <div id='repertoireBank' className='repertoireBank' onDragOver={(e) => e.preventDefault()} onDrop={(e) => {
-        e.preventDefault()
-        const songID = e.dataTransfer.getData('id')
-        const from = e.dataTransfer.getData('from')
-        if (from === 'repertoire') {
-          return
-        }
-        if (from.startsWith('set-')) {
-          const setIndex = Number(from.substring(4))
-          setSetlist(storage.updateSetlist(id, {
-            ...setlist,
-            sets: [...setlist.sets.slice(0, setIndex), setlist.sets[setIndex].filter((s) => s.id !== songID), ...setlist.sets.slice(setIndex + 1)]
-          }))
-        } else if (from === 'encore') {
-          setSetlist(storage.updateSetlist(id, {
-            ...setlist,
-            encore: setlist.encore.filter((s) => s.id !== songID)
-          }))
-        }
-        lastSort.func(lastSort.asc, {
-          ...repertoire,
-          songs: [...repertoire.songs, fullRepertoire.songs.find((s) => s.id === songID)]
-        }, lastSort.cat)
-      }}>
+      <div id='repertoireBank' className='repertoireBank' onDragOver={dragOver('repertoire')} onDrop={dropSong('repertoire')}>
         <div className='repertoireBankVert' onMouseDown={(e) => {
           e.preventDefault()
           setRepertoireDragging(true)
@@ -603,8 +650,8 @@ export default function EditSetlist() {
                 <div className='repCategory' >
                   Song title
                   <div className='categoryAction'>
-                    <div className='button' onClick={() => sortByName(true, repertoire)}>˄</div>
-                    <div className='button' onClick={() => sortByName(false, repertoire)}>˅</div>
+                    <div className='button' onClick={() => sortByName(true)}>˄</div>
+                    <div className='button' onClick={() => sortByName(false)}>˅</div>
                   </div>
                 </div>
               </th>
@@ -612,8 +659,8 @@ export default function EditSetlist() {
                 <div className='repCategory'>
                   Artist
                   <div className='categoryAction'>
-                    <div className='button' onClick={() => sortByArtist(true, repertoire)}>˄</div>
-                    <div className='button' onClick={() => sortByArtist(false, repertoire)}>˅</div>
+                    <div className='button' onClick={() => sortByArtist(true)}>˄</div>
+                    <div className='button' onClick={() => sortByArtist(false)}>˅</div>
                   </div>
                 </div>
               </th>
@@ -621,8 +668,8 @@ export default function EditSetlist() {
                 <div className='repCategory'>
                   Length
                   <div className='categoryAction'>
-                    <div className='button' onClick={() => sortByLength(true, repertoire)}>˄</div>
-                    <div className='button' onClick={() => sortByLength(false, repertoire)}>˅</div>
+                    <div className='button' onClick={() => sortByLength(true)}>˄</div>
+                    <div className='button' onClick={() => sortByLength(false)}>˅</div>
                   </div>
                 </div>
               </th>
@@ -630,8 +677,8 @@ export default function EditSetlist() {
                 <div className='repCategory'>
                   {c.title}
                   <div className='categoryAction'>
-                    <div className='button' onClick={() => sortByCat(true, repertoire, c)}>˄</div>
-                    <div className='button' onClick={() => sortByCat(false, repertoire, c)}>˅</div>
+                    <div className='button' onClick={() => sortByCat(true, c)}>˄</div>
+                    <div className='button' onClick={() => sortByCat(false, c)}>˅</div>
                   </div>
                 </div>
               </th>)}

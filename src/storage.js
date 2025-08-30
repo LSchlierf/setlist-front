@@ -1,59 +1,123 @@
-import { v4 as uuidv4 } from 'uuid'
+import { io } from 'socket.io-client'
+import Cookies from 'js-cookie';
 
 class storage {
 
-    static LOCAL_STORAGE_KEY_REPERTOIRE = 'repertoire-object'
-    static LOCAL_STORAGE_KEY_SETLISTS = 'setlists-object'
+    static socket = undefined;
+    static user = '';
 
-    static getRepertoire() {
-        const savedRepertoire = JSON.parse(localStorage.getItem(this.LOCAL_STORAGE_KEY_REPERTOIRE))
-        if (savedRepertoire) return savedRepertoire
-        return {categories: [], songs: []}
+    static async init() {
+        this.user = await this.testToken()
+        if (this.user.length > 0 && !this.socket) {
+            this.socket = io('/', {
+                extraHeaders: {
+                    'token': Cookies.get('token'),
+                }
+            })
+        }
     }
 
-    static saveRepertoire(repertoire) {
-        localStorage.setItem(this.LOCAL_STORAGE_KEY_REPERTOIRE, JSON.stringify(repertoire))
+    static logout() {
+        this.user = ''
+        this.socket?.disconnect()
+        this.socket = undefined
+    }
+
+    static async getRepertoire() {
+        const token = Cookies.get('token')
+        const repertoire = await fetch('/api/repertoire', {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json',
+                'Authorization': `Bearer ${token}`
+            }
+        }).then(response => response.json()).catch(() => undefined) || {}
         return repertoire
     }
 
-    static getSetlists() {
-        const savedSetlists = JSON.parse(localStorage.getItem(this.LOCAL_STORAGE_KEY_SETLISTS))
-        if (savedSetlists) return savedSetlists
-        return {}
+    static async saveRepertoire(repertoire) {
+        const token = Cookies.get('token')
+        await fetch('/api/repertoire', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(repertoire)
+        })
+        return await this.getRepertoire()
     }
 
-    static getSetlist(id) {
-        return this.getSetlists()[id]
+    static async testToken() {
+        if (!Cookies.get('token')) {
+            return ""
+        }
+        const token = Cookies.get('token')
+        return await fetch('/api/pinguser', {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json',
+                'Authorization': `Bearer ${token}`
+            }
+        }).then(response => response.text()).catch(() => "")
     }
 
-    static addSetlist(setlist) {
-        let savedSetlists = JSON.parse(localStorage.getItem(this.LOCAL_STORAGE_KEY_SETLISTS))
-        const id = uuidv4()
-        if(!savedSetlists) savedSetlists = {}
-        savedSetlists[id] = setlist
-        localStorage.setItem(this.LOCAL_STORAGE_KEY_SETLISTS, JSON.stringify(savedSetlists))
-        return id;
+    static async getSetlists() {
+        const token = Cookies.get('token')
+        return await fetch('/api/setlists', {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json',
+                'Authorization': `Bearer ${token}`
+            }
+        }).then(response => response.json()).catch(() => [])
     }
 
-    static updateSetlist(id, setlist) {
-        let savedSetlists = JSON.parse(localStorage.getItem(this.LOCAL_STORAGE_KEY_SETLISTS))
-        if (!savedSetlists) savedSetlists = {}
-        savedSetlists[id] = setlist
-        localStorage.setItem(this.LOCAL_STORAGE_KEY_SETLISTS, JSON.stringify(savedSetlists))
-        return setlist
+    static async getSetlist(id) {
+        const token = Cookies.get('token')
+        return await fetch(`/api/setlist/${id}`, {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json',
+                'Authorization': `Bearer ${token}`
+            }
+        }).then(response => response.json())
     }
 
-    static deleteSetlist(id) {
-        let savedSetlists = JSON.parse(localStorage.getItem(this.LOCAL_STORAGE_KEY_SETLISTS))
-        delete savedSetlists[id]
-        localStorage.setItem(this.LOCAL_STORAGE_KEY_SETLISTS, JSON.stringify(savedSetlists))
-        return  savedSetlists
+    static async addSetlist() {
+        const token = Cookies.get('token')
+        return await fetch('/api/setlist', {
+            method: 'POST',
+            headers: {
+                'Accept': 'text/plain',
+                'Authorization': `Bearer ${token}`
+            }
+        }).then(response => response.text())
     }
 
-    static clearSetlists() {
-        localStorage.setItem(this.LOCAL_STORAGE_KEY_SETLISTS, {})
+    static async updateSetlist(id, setlist) {
+        const token = Cookies.get('token')
+        await fetch(`/api/setlist/${id}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(setlist)
+        })
+        return await this.getSetlist(id)
     }
 
+    static async deleteSetlist(id) {
+        const token = Cookies.get('token')
+        await fetch(`/api/setlist/${id}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        })
+        return await this.getSetlists()
+    }
 }
 
 export default storage
