@@ -65,7 +65,7 @@ export default function EditSetlist() {
   }, [fullRepertoire])
 
   useEffect(() => {
-    if ([...setlist.sets.flat(), ...setlist.encore].find(s => s.dragged) === undefined) {
+    if (!draggingID) {
       revalidateTimes()
     }
   }, [JSON.stringify(setlist.breaks), JSON.stringify(setlist.sets), JSON.stringify(setlist.encore)])
