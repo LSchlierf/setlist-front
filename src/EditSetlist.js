@@ -65,7 +65,9 @@ export default function EditSetlist() {
   }, [fullRepertoire])
 
   useEffect(() => {
-    revalidateTimes()
+    if ([...setlist.sets.flat(), ...setlist.encore].find(s => s.dragged) === undefined) {
+      revalidateTimes()
+    }
   }, [JSON.stringify(setlist.breaks), JSON.stringify(setlist.sets), JSON.stringify(setlist.encore)])
 
   function revalidateTimes() {
@@ -174,10 +176,7 @@ export default function EditSetlist() {
     return (e) => {
       e.preventDefault()
 
-      const from = draggingFrom
       const id = draggingID
-
-      if ('repretoire' === from) return;
 
       let song = {
         ...fullRepertoire.songs.filter(s => s.id === id)[0],
