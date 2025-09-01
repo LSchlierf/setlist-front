@@ -394,11 +394,13 @@ export default function EditSetlist() {
     const minutes = concertDurationMinutes(((setlist.breaks?.len || 0) * (Math.max(setlist.sets?.length - 1, 0) || 0)) + ((setlist.breaks?.buffer || 0) * (setlist.sets?.length)), setlist.sets, setlist.encore)
     const startMinutes = ((((endH * 60) + endM) + 1440) - minutes) % 1440
     const startVal = ('0' + (Math.floor(startMinutes / 60))).slice(-2) + ':' + ('0' + (startMinutes % 60)).slice(-2)
-    handleSetlistChange(s => ({
-      ...s,
-      startTime: startVal,
-      timeFixed: 'end'
-    }))
+    if (startVal !== setlist.startTime) {
+      handleSetlistChange(s => ({
+        ...s,
+        startTime: startVal,
+        timeFixed: 'end'
+      }))
+    }
   }
 
   function endTimeUpdate() {
@@ -407,11 +409,13 @@ export default function EditSetlist() {
     const minutes = concertDurationMinutes(((setlist.breaks?.len || 0) * (Math.max(setlist.sets?.length - 1, 0) || 0)) + ((setlist.breaks?.buffer || 0) * (setlist.sets?.length)), setlist.sets, setlist.encore)
     const startMinutes = ((((endH * 60) + endM) + 1440) - minutes) % 1440
     const startVal = ('0' + (Math.floor(startMinutes / 60))).slice(-2) + ':' + ('0' + (startMinutes % 60)).slice(-2)
-    handleSetlistChange(s => ({
-      ...s,
-      startTime: startVal,
-      timeFixed: 'end'
-    }))
+    if (startVal !== setlist.startTime) {
+      handleSetlistChange(s => ({
+        ...s,
+        startTime: startVal,
+        timeFixed: 'end'
+      }))
+    }
   }
 
   function calculateEndTime(startTime, breaks, sets, encore) {
@@ -474,7 +478,7 @@ export default function EditSetlist() {
             </table>
             : <></>}
         </div>
-        
+
         <div className='singleSet' onDragOver={dragOver('encore')} onDrop={dropSong('encore')}>
           <div className='singleSetHead'>
             Encore
