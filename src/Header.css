@@ -1,13 +1,27 @@
 .header {
-    width: 100vw;
-    display: flex;
-    flex-direction: row;
-    justify-content: space-between;
-    padding: 20px 0;
+    width: calc(100vw - 20px);
+    padding: 20px 10px;
     background-color: rgb(69, 69, 69);
 }
 
+.header-buttons {
+    width: calc(100vw - 20px);
+    padding: 20px 10px;
+    display: flex;
+    z-index: 10;
+    position: absolute;
+    top: 0;
+    left: 0;
+    flex-direction: row;
+    justify-content: space-between;
+}
+
 .title {
+    display: flex;
+    justify-content: center;
+    position: relative;
+    top: 0;
+    left: 0;
     font-weight: bold;
     font-size: xx-large;
 }
