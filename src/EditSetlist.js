@@ -29,6 +29,7 @@ export default function EditSetlist() {
   const [newSetSong, setNewSetSong] = useState()
   const [draggingID, setDraggingID] = useState('')
   const [draggingFrom, setDraggingFrom] = useState('')
+  const [filterText, setFilterText] = useState('')
 
   function handleSocketInput(newSetlist) {
     if (newSetlist.id !== id) return;
@@ -444,16 +445,8 @@ export default function EditSetlist() {
     bank.style.width = newWidth + 'px'
   }
 
-  return (
-    <div className='pageContainer' onMouseMove={trackRepertoireSizeMove} onPointerMove={trackRepertoireSizeMove} onMouseUp={() => {
-      setRepertoireDragging(false)
-    }} onPointerUp={() => {
-      setRepertoireDragging(false)
-    }} >
-      <Header title='Edit setlist' leftButton={leftButton} />
-
-      {dialog}
-
+  function setlistBank() {
+    return (
       <div className='setlistBank'>
         <input id='concertTitle' type='text' value={setlist.concert} onInput={() => {
           const input = document.getElementById('concertTitle')
@@ -635,7 +628,17 @@ export default function EditSetlist() {
           {/* {JSON.stringify(repertoire)} */}
         </div>
       </div>
+    )
+  }
 
+  function filterSong(s) {
+    return s.title.toLowerCase().includes(filterText.toLowerCase()) ||
+      s.artist.toLowerCase().includes(filterText.toLowerCase()) ||
+      s.notes?.toLowerCase().includes(filterText.toLowerCase())
+  }
+
+  function repertoireBank() {
+    return (
       <div id='repertoireBank' className='repertoireBank' onDragOver={dragOver('repertoire')} onDrop={dropSong('repertoire')}>
         <div className='repertoireBankVert' onMouseDown={(e) => {
           e.preventDefault()
@@ -648,55 +651,78 @@ export default function EditSetlist() {
           <div className='repertoireBankVertDot' />
           <div className='repertoireBankVertDot' />
         </div>
-        <table>
-          <thead className='repertoireTableHeader'>
-            <tr>
-              <th>
-                <div className='repCategory' >
-                  Song title
-                  <div className='categoryAction'>
-                    <div className='button' onClick={() => sortByName(true)}>˄</div>
-                    <div className='button' onClick={() => sortByName(false)}>˅</div>
+        <div className='repertoireTableCointainer'>
+          <div className='filterOption'>
+            Filter:
+            <input type='text' value={filterText} onInput={e => setFilterText(e.target.value)} />
+            <span className='button' onClick={() => setFilterText('')}>Clear</span>
+          </div>
+          <table>
+            <thead className='repertoireTableHeader'>
+              <tr>
+                <th>
+                  <div className='repCategory' >
+                    Song title
+                    <div className='categoryAction'>
+                      <div className='button' onClick={() => sortByName(true)}>˄</div>
+                      <div className='button' onClick={() => sortByName(false)}>˅</div>
+                    </div>
                   </div>
-                </div>
-              </th>
-              <th>
-                <div className='repCategory'>
-                  Artist
-                  <div className='categoryAction'>
-                    <div className='button' onClick={() => sortByArtist(true)}>˄</div>
-                    <div className='button' onClick={() => sortByArtist(false)}>˅</div>
+                </th>
+                <th>
+                  <div className='repCategory'>
+                    Artist
+                    <div className='categoryAction'>
+                      <div className='button' onClick={() => sortByArtist(true)}>˄</div>
+                      <div className='button' onClick={() => sortByArtist(false)}>˅</div>
+                    </div>
                   </div>
-                </div>
-              </th>
-              <th>
-                <div className='repCategory'>
-                  Length
-                  <div className='categoryAction'>
-                    <div className='button' onClick={() => sortByLength(true)}>˄</div>
-                    <div className='button' onClick={() => sortByLength(false)}>˅</div>
+                </th>
+                <th>
+                  <div className='repCategory'>
+                    Length
+                    <div className='categoryAction'>
+                      <div className='button' onClick={() => sortByLength(true)}>˄</div>
+                      <div className='button' onClick={() => sortByLength(false)}>˅</div>
+                    </div>
                   </div>
-                </div>
-              </th>
-              {repertoire.categories.filter((c) => categories[c.id]).map((c) => <th key={c.id}>
-                <div className='repCategory'>
-                  {c.title}
-                  <div className='categoryAction'>
-                    <div className='button' onClick={() => sortByCat(true, c)}>˄</div>
-                    <div className='button' onClick={() => sortByCat(false, c)}>˅</div>
+                </th>
+                {repertoire.categories.filter((c) => categories[c.id]).map((c) => <th key={c.id}>
+                  <div className='repCategory'>
+                    {c.title}
+                    <div className='categoryAction'>
+                      <div className='button' onClick={() => sortByCat(true, c)}>˄</div>
+                      <div className='button' onClick={() => sortByCat(false, c)}>˅</div>
+                    </div>
                   </div>
-                </div>
-              </th>)}
-              <th>
-                Notes
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {repertoire.songs.map(songRow('repertoire'))}
-          </tbody>
-        </table>
+                </th>)}
+                <th>
+                  Notes
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {repertoire.songs.filter(filterSong).map(songRow('repertoire'))}
+            </tbody>
+          </table>
+        </div>
       </div>
+    )
+  }
+
+  return (
+    <div className='pageContainer' onMouseMove={trackRepertoireSizeMove} onPointerMove={trackRepertoireSizeMove} onMouseUp={() => {
+      setRepertoireDragging(false)
+    }} onPointerUp={() => {
+      setRepertoireDragging(false)
+    }} >
+      <Header title='Edit setlist' leftButton={leftButton} />
+
+      {dialog}
+
+      {setlistBank()}
+
+      {repertoireBank()}
     </div >
   )
 }

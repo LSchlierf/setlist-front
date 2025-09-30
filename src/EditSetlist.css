@@ -16,11 +16,27 @@
     overflow-x: hidden;
 }
 
+.filterOption {
+    padding: 10px 10px 0;
+    margin: 20px 30px 0;
+    position: relative;
+    z-index: 20;
+    font-weight: bold;
+}
+
+.filterOption > input {
+    margin-left: 10px;
+}
+
+.filterOption > .button {
+    font-weight: normal;
+}
+
 .repertoireBankVert {
     display: none;
 }
 
-@media (pointer: fine) or (pointer: coarse) {   
+@media (pointer: fine) or (pointer: coarse) {
     .repertoireBankVert {
         height: 100vh;
         width: 8px;
@@ -69,12 +85,12 @@
     border-radius: 10px;
 }
 
-.singleSet > table {
+.singleSet>table {
     margin-top: 0;
     margin-bottom: 0;
 }
 
-.singleSet.newSet > table {
+.singleSet.newSet>table {
     margin-bottom: 30px;
 }
 
