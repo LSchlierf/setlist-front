@@ -131,10 +131,12 @@ export default function EditSetlist() {
     }
   }
 
-  function startDragging(from, id) { // @TODO: repertoire sort on start drag
-    return () => {
+  function startDragging(from, id) {
+    return (e) => {
       setDraggingFrom(from)
       setDraggingID(id)
+
+      e.dataTransfer.setData('text/plain', 'dummy') // somehow required for safari
 
       const makeSongDragged = (id) => (song) => {
         if (song.id !== id) return song;
