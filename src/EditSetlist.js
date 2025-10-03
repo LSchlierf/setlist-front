@@ -9,6 +9,7 @@ import { downloadFile } from './util'
 import { BlobProvider } from '@react-pdf/renderer'
 import SetlistSimplePDF from './SetlistSimplePDF'
 import SetlistDetailedPDF from './SetlistDetailedPDF'
+import { loadingSongs } from './loadingSong'
 
 const DEFAULT_REPERTOIRE = { categories: [], songs: [] }
 const DEFAULT_SETLIST = { concert: 'new setlist', sets: [], encore: [], breaks: { len: 20, buffer: 5 }, startTime: '19:30', timeFixed: 'start' }
@@ -18,13 +19,13 @@ export default function EditSetlist() {
   let { state } = useLocation()
   const { id, concert } = state
 
-  const [fullRepertoire, setFullRepertoire] = useState(DEFAULT_REPERTOIRE)
+  const [fullRepertoire, setFullRepertoire] = useState()
   const [dialog, setDialog] = useState(<></>)
   const [endTime, setEndTime] = useState('')
   const [repertoireDragging, setRepertoireDragging] = useState(false)
-  const [setlist, setSetlist] = useState(DEFAULT_SETLIST)
-  const [repertoire, setRepertoire] = useState(DEFAULT_REPERTOIRE)
-  const [categories, setCategories] = useState([])
+  const [setlist, setSetlist] = useState()
+  const [repertoire, setRepertoire] = useState()
+  const [categories, setCategories] = useState({})
   const [lastSort, setLastSort] = useState({ func: sortByName, asc: true, cat: null })
   const [newSetSong, setNewSetSong] = useState()
   const [draggingID, setDraggingID] = useState('')
@@ -56,26 +57,28 @@ export default function EditSetlist() {
   useEffect(() => {
     setRepertoire({
       ...fullRepertoire,
-      songs: fullRepertoire.songs.filter((s) => ([...setlist.sets.flat(), ...setlist.encore, newSetSong].find((t) => t?.id === s.id) === undefined))
+      songs: fullRepertoire?.songs?.filter((s) => (setlist ? ([...setlist.sets.flat(), ...setlist.encore, newSetSong].find((t) => t?.id === s.id) === undefined) : false))
     })
-    lastSort.func(lastSort.asc, lastSort.cat)
-  }, [fullRepertoire, JSON.stringify(setlist.sets), JSON.stringify(setlist.encore)])
+    setlist && setlist.songs ? lastSort.func(lastSort.asc, lastSort.cat) : (() => { })()
+  }, [fullRepertoire, JSON.stringify(setlist?.sets), JSON.stringify(setlist?.encore)])
 
   useEffect(() => {
-    setCategories(Object.fromEntries(fullRepertoire.categories.map((c) => [c.id, (c.show === undefined ? true : c.show)])))
+    setCategories(fullRepertoire ? Object.fromEntries(fullRepertoire.categories.map((c) => [c.id, (c.show === undefined ? true : c.show)])) : {})
   }, [fullRepertoire])
 
   useEffect(() => {
     if (!draggingID) {
       revalidateTimes()
     }
-  }, [JSON.stringify(setlist.breaks), JSON.stringify(setlist.sets), JSON.stringify(setlist.encore)])
+  }, [JSON.stringify(setlist?.breaks), JSON.stringify(setlist?.sets), JSON.stringify(setlist?.encore)])
 
   function revalidateTimes() {
-    if (setlist.timeFixed == 'end') {
-      endTimeUpdate()
-    } else {
-      startTimeUpdate()
+    if (setlist) {
+      if (setlist.timeFixed == 'end') {
+        endTimeUpdate()
+      } else {
+        startTimeUpdate()
+      }
     }
   }
 
@@ -306,7 +309,7 @@ export default function EditSetlist() {
           <td>
             {Math.floor(song.length / 60)}m {song.length % 60}s
           </td>
-          {repertoire.categories.filter((c) => categories[c.id]).map((c) => <td key={c.id} style={{
+          {repertoire?.categories.filter((c) => categories[c.id]).map((c) => <td key={c.id} style={{
             backgroundColor: c.type === 'bool' ? (song.properties[c.id] ? 'green' : 'red') : null
           }}>
             {catDisplay(song, c)}
@@ -341,7 +344,7 @@ export default function EditSetlist() {
         <th>Title</th>
         <th>Artist</th>
         <th>Length</th>
-        {repertoire.categories.filter((c) => categories[c.id]).map((c) =>
+        {repertoire?.categories?.filter((c) => categories[c.id]).map((c) =>
           <th key={c.id}>{c.title}</th>
         )}
         <th>Notes</th>
@@ -373,6 +376,23 @@ export default function EditSetlist() {
         <div className='singleSetFoot'>
           {set.length} Songs, ~{setLengthApprox(set)} min, {setLength(set)}
         </div>
+      </div>
+    )
+  }
+
+  function fauxSet() {
+    return (
+      <div className='singleSet'>
+        <div className='singleSetHead'>
+          Loading...
+        </div>
+        <table>
+          {songTableHead()}
+          <tbody>
+            {loadingSongs(8, repertoire?.categories?.length + 4 || 4)}
+          </tbody>
+        </table>
+        <div className='singleSetFoot' />
       </div>
     )
   }
@@ -448,7 +468,7 @@ export default function EditSetlist() {
   function setlistBank() {
     return (
       <div className='setlistBank'>
-        <input id='concertTitle' type='text' value={setlist.concert} onInput={() => {
+        <input id='concertTitle' type='text' value={setlist?.concert || concert} onInput={() => {
           const input = document.getElementById('concertTitle')
           handleSetlistChange(s => ({
             ...s,
@@ -457,7 +477,7 @@ export default function EditSetlist() {
           storage.socket.emit('setlists')
         }} />
 
-        {setlist.sets.map(setDisplay)}
+        {setlist?.sets && repertoire?.categories ? setlist.sets.map(setDisplay) : fauxSet()}
 
         <div className='singleSet newSet' onDragOver={dragOver('newSet')} onDrop={dropSong('newSet')}>
           <div className='newSetHead'>
@@ -480,20 +500,20 @@ export default function EditSetlist() {
           <table>
             {songTableHead()}
             <tbody>
-              {setlist.encore.map(songRow('encore'))}
+              {setlist?.encore && repertoire?.categories ? setlist.encore.map(songRow('encore')) : loadingSongs(3, repertoire?.categories?.length + 4 || 4)}
             </tbody>
           </table>
           <div className='singleSetFoot'>
-            {setlist.encore.length} Songs, ~{setLengthApprox(setlist.encore)} min, {setLength(setlist.encore)}
+            {setlist?.encore.length || 0} Songs, ~{setlist ? setLengthApprox(setlist.encore) : 0} min, {setlist ? setLength(setlist.encore) : "0m"}
           </div>
         </div>
 
         <div className='info'>
-          Total songs: {[...setlist.encore, ...setlist.sets.flat()].length}
+          Total songs: {setlist ? [...setlist.encore, ...setlist.sets.flat()].length : 0}
           <br />
-          Raw length (without breaks / buffer): <b><u>{setLength([...setlist.encore, ...setlist.sets.flat()])}</u></b>
+          Raw length (without breaks / buffer): <b><u>{setlist ? setLength([...setlist.encore, ...setlist.sets.flat()]) : "0m"}</u></b>
           <br />
-          <input id='breaksLen' type='number' value={setlist.breaks?.len} min={0} max={60} style={{ width: 50 }} onInput={() => {
+          <input id='breaksLen' type='number' value={setlist?.breaks?.len} min={0} max={60} style={{ width: 50 }} onInput={() => {
             const input = document.getElementById('breaksLen')
             handleSetlistChange(s => ({
               ...s,
@@ -504,7 +524,7 @@ export default function EditSetlist() {
             }))
           }} /> minute break after each set (except last set)
           <br />
-          <input id='breaksBuffer' type='number' value={setlist.breaks?.buffer} min={0} max={60} style={{ width: 50 }} onInput={() => {
+          <input id='breaksBuffer' type='number' value={setlist?.breaks?.buffer} min={0} max={60} style={{ width: 50 }} onInput={() => {
             const input = document.getElementById('breaksBuffer')
             handleSetlistChange(s => ({
               ...s,
@@ -517,22 +537,23 @@ export default function EditSetlist() {
           <br />
           Total length (with breaks & buffer): <b><u>{
             function () {
+              if (!setlist) return "0m"
               let length = concertDurationMinutes(((setlist.breaks?.len || 0) * (Math.max(setlist.sets?.length - 1, 0) || 0)) + ((setlist.breaks?.buffer || 0) * (setlist.sets?.length)), setlist.sets, setlist.encore)
               return Math.floor(length / 60) + 'h ' + (length % 60) + 'm'
             }()
           }</u></b>
           <br />
-          Start time: <input value={setlist.startTime || '19:30'} id='startTime' type='time' onChange={e => setSetlist(s => ({ ...s, startTime: e.target.value }))} onBlur={startTimeInput} />,
+          Start time: <input value={setlist?.startTime || '19:30'} id='startTime' type='time' onChange={e => setSetlist(s => ({ ...s, startTime: e.target.value }))} onBlur={startTimeInput} />,
           End time: <input id='endTime' type='time' onChange={e => setEndTime(e.target.value)} onBlur={endTimeInput} value={endTime} />
         </div>
 
         <div className='info'>
           Select categories to display:
           <br />
-          {repertoire.categories.map((c) => (
+          {repertoire?.categories?.map((c) => (
             <div>
-              <input defaultChecked={categories[c.id]} id={'selectShowCat-' + c.id} type='checkbox' onInput={() => {
-                const input = document.getElementById('selectShowCat-' + c.id)
+              <input checked={categories[c.id]} id={'selectShowCat-' + c.id} type='checkbox' onChange={(e) => {
+                const input = e.target
                 let newCategories = { ...categories }
                 newCategories[c.id] = input.checked
                 setCategories(newCategories)
@@ -541,7 +562,7 @@ export default function EditSetlist() {
           ))}
         </div>
 
-        <div className='button' onClick={() => {
+        {setlist?.sets && repertoire?.songs ? <div className='button' onClick={() => {
           setDialog(
             <dialog open id='dialog'>
               <u>Export setlist</u>
@@ -550,7 +571,7 @@ export default function EditSetlist() {
               <button type='button' onClick={() => {
                 downloadFile({
                   data: JSON.stringify(setlist, null, 2),
-                  fileName: 'Setlist  ' + setlist.concert + '.json',
+                  fileName: 'Setlist ' + setlist.concert + '.json',
                   fileType: 'text/json'
                 })
                 setDialog(<></>)
@@ -620,7 +641,7 @@ export default function EditSetlist() {
           )
         }} >
           Export setlist
-        </div>
+        </div> : <></>}
 
         <div className='debug'>
           {/* {JSON.stringify(categories)} */}
@@ -687,7 +708,7 @@ export default function EditSetlist() {
                     </div>
                   </div>
                 </th>
-                {repertoire.categories.filter((c) => categories[c.id]).map((c) => <th key={c.id}>
+                {repertoire?.categories?.filter((c) => categories[c.id]).map((c) => <th key={c.id}>
                   <div className='repCategory'>
                     {c.title}
                     <div className='categoryAction'>
@@ -702,7 +723,7 @@ export default function EditSetlist() {
               </tr>
             </thead>
             <tbody>
-              {repertoire.songs.filter(filterSong).map(songRow('repertoire'))}
+              {repertoire?.songs && setlist ? repertoire.songs.filter(filterSong).map(songRow('repertoire')) : loadingSongs(5, repertoire?.categories?.length + 4 || 4)}
             </tbody>
           </table>
         </div>

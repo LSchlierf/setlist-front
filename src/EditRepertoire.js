@@ -7,11 +7,12 @@ import { v4 as uuidv4 } from 'uuid'
 import { useNavigate } from 'react-router-dom'
 import { byName, byArtist, byLength, byCat } from './songSort'
 import { downloadFile } from './util'
+import { loadingSongs } from './loadingSong'
 
 const DEFAULT_REPERTOIRE = { categories: [], songs: [] }
 
 export default function EditRepertoire(props) {
-  const [repertoire, setRepertoire] = useState(DEFAULT_REPERTOIRE)
+  const [repertoire, setRepertoire] = useState()
   const [dialog, setDialog] = useState(<></>)
 
   useEffect(() => {
@@ -675,7 +676,7 @@ export default function EditRepertoire(props) {
                 <div className='button' onClick={() => sortByLength(false)}>˅</div>
               </div>
             </th>
-            {repertoire.categories.filter((c) => c.show === undefined ? true : c.show).map((c) => <th draggable='true' className='categoryHeader' id={c.id} key={c.id} onDragStart={(e) => {
+            {repertoire?.categories.filter((c) => c.show === undefined ? true : c.show).map((c) => <th draggable='true' className='categoryHeader' id={c.id} key={c.id} onDragStart={(e) => {
               e.dataTransfer.setData('id', c.id)
               e.dataTransfer.setData('type', 'category')
             }}>
@@ -725,7 +726,7 @@ export default function EditRepertoire(props) {
             }
           }
         }}>
-          {repertoire.songs.map(songRow)}
+          {repertoire?.songs.map(songRow) || loadingSongs(5, 5)}
         </tbody>
       </table>
       <div onClick={addSong} className='button'>
@@ -738,14 +739,14 @@ export default function EditRepertoire(props) {
         Import / Export Repertoire
       </div>
       <div className='info'>
-        Total songs: {repertoire.songs.length}
+        Total songs: {repertoire?.songs.length || 0}
         <br />
-        Total length: {totalLength()}
+        Total length: {repertoire ? totalLength() : 0}
         <br />
         <br />
         Show categories:
         <br />
-        {repertoire.categories.map((c) => (
+        {repertoire?.categories.map((c) => (
           <div key={'categoryShowSelect-' + c.id} ><input checked={c.show === undefined ? true : c.show} id={'showCategoryCheckBox-' + c.id} type='checkbox' onChange={(e) => {
             let newCategories = repertoire.categories.map((cat) => {
               if (cat.id === c.id) {
