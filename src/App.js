@@ -6,7 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import Cookies from 'js-cookie';
 
 function App() {
-  const [setlists, setSetlists] = useState([])
+  const [setlists, setSetlists] = useState()
   const [dialog, setDialog] = useState(<></>)
 
   useEffect(() => {
@@ -194,12 +194,26 @@ function App() {
     )
   }
 
+  function loadingSetlist() {
+    return (
+      <div className='container'>
+        <div className='loadingTextContainer'>
+          <div className='loadingText' />
+        </div>
+      </div>
+    )
+  }
+
   function mainPage() {
     return (
       <>
         {repertoireContainer()}
         {separator()}
-        {setlists.map(setlistContainer)}
+        {setlists?.map(setlistContainer) || <>
+          {loadingSetlist()}
+          {loadingSetlist()}
+          {loadingSetlist()}
+        </>}
         {separator()}
         <div className='container' >
           <div className='button' onClick={newSetlist}>
