@@ -41,7 +41,7 @@ function SetlistSimplePDF(props) {
         let part = set.slice(0, rowsPerColumn - rowsThisColumn - (setStarted ? 1 : 0))
         set = set.slice(rowsPerColumn - rowsThisColumn - (setStarted ? 1 : 0))
 
-        pages[pages.length - 1].push(<View wrap={false} style={styles.set}>
+        pages[pages.length - 1].push(<View style={styles.set}>
           {setStarted ? <View><Text style={styles.setTitle}> </Text></View> : <></>}
           {part}
         </View>)
@@ -67,7 +67,7 @@ function SetlistSimplePDF(props) {
       }
 
       if (set.length > 0) {
-        pages[pages.length - 1].push(<View wrap={false} style={styles.set}>
+        pages[pages.length - 1].push(<View style={styles.set}>
           {setStarted ? <View><Text style={styles.setTitle}> </Text></View> : <></>}
           {set}
         </View>)
