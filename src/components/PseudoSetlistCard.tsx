@@ -8,7 +8,7 @@ export type PseudoSetlistCard = {
 export default function PseudoSetlistCard({ onClick }: PseudoSetlistCard) {
   return (
     <Card
-      className=" min-h-50 flex flex-col justify-center items-center border-dashed hover:bg-gray-800/50 hover:cursor-pointer"
+      className=" min-h-45 flex flex-col justify-center items-center border-dashed hover:bg-gray-800/50 hover:cursor-pointer"
       onClick={onClick}
     >
       <Plus />

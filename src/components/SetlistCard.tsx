@@ -3,7 +3,6 @@ import { Button } from "./ui/button";
 import {
   Card,
   CardAction,
-  CardContent,
   CardFooter,
   CardHeader,
   CardTitle,
@@ -24,7 +23,7 @@ export default function SetlistCard({
   sets,
 }: SetlistCardProps) {
   return (
-    <Card key={id}>
+    <Card key={id} className="flex flex-col justify-between">
       <CardHeader className="text-2xl">
         <CardTitle>{name}</CardTitle>
         <CardAction>
@@ -37,8 +36,8 @@ export default function SetlistCard({
           </Button>
         </CardAction>
       </CardHeader>
-      <CardContent>{sets} Sets</CardContent>
-      <CardFooter>
+      <CardFooter className="flex flex-col items-start gap-4">
+        {sets} sets
         <Link className="w-full" to={`/editSetlist/${id}`}>
           <Button className="w-full">Edit Setlist</Button>
         </Link>
