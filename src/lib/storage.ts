@@ -93,6 +93,30 @@ class storage {
     });
   }
 
+  static async getSongs() {
+    return await fetch("/api/user/repertoire/songs", {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+        Authorization: `Bearer ${this._token}`,
+      },
+    })
+      .then((response) => response.json())
+      .catch(() => undefined);
+  }
+
+  static async getCategories() {
+    return await fetch("/api/user/repertoire/categories", {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+        Authorization: `Bearer ${this._token}`,
+      },
+    })
+      .then((response) => response.json())
+      .catch(() => undefined);
+  }
+
   // static async getRepertoire() {
   //     const repertoire = await fetch('/api/repertoire', {
   //         method: 'GET',

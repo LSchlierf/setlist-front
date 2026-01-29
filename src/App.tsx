@@ -31,6 +31,7 @@ function App() {
         setLoggedIn(true);
       }
     });
+    document.title = "Setlist Tool";
   }, []);
 
   const makeUsernameUppercase = (username: string) => {

@@ -14,6 +14,7 @@ export default function EditSetlist() {
 
   useEffect(() => {
     storage.init().then((v) => !v && backToMainPage());
+    document.title = "Setlist"; // TODO
   }, []);
 
   return (
@@ -26,7 +27,9 @@ export default function EditSetlist() {
         }
         onLogin={(loggedIn) => !loggedIn && backToMainPage()}
       />
-      Edit Setlist {id}
+      <div className="pt-8 px-30">
+        Edit Setlist {id} for user {storage.user?.name}
+      </div>
     </div>
   );
 }
