@@ -1,6 +1,6 @@
 import { Link, useNavigate } from "react-router";
 import Header from "./components/Header";
-import { ArrowLeft, Check, Pen, Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, Check, Pen, Plus, Trash2, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import storage from "./lib/storage";
 import {
@@ -13,6 +13,16 @@ import {
 } from "./components/ui/table";
 import { Button } from "./components/ui/button";
 import { ButtonGroup } from "./components/ui/button-group";
+import { Input } from "./components/ui/input";
+import { Checkbox } from "./components/ui/checkbox";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "./components/ui/select";
 
 type category = {
   id: string;
@@ -26,9 +36,15 @@ type song = {
   id: string;
   title: string;
   artist: string;
-  length: string;
+  length: number;
   notes: string;
   properties: { [key: string]: any };
+};
+
+type InputProps<T> = {
+  editing: boolean;
+  value: T;
+  onChange: (oldVal: T, newVal: T) => void;
 };
 
 export default function EditRepertoire() {
@@ -53,31 +69,207 @@ export default function EditRepertoire() {
     document.title = "Repertoire";
   }, []);
 
-  const categoryHead = ({ id, title, show, type, valueRange }: category) => {
+  /***
+   * START INPUT HANDLERS
+   * TODO:
+   * - propagate to backend
+   * - enroll in undo history
+   */
+  const changeInherentSongAttribute = (
+    songId: string,
+    attribute: "title" | "artist" | "length" | "notes",
+    newVal: string | number
+  ) => {
+    setSongs((songs) =>
+      songs?.map((s) => {
+        if (s.id !== songId) return s;
+        return {
+          ...s,
+          [attribute]: newVal,
+        };
+      })
+    );
+  };
+
+  const editTtile = (songId: string) => (oldVal: string, newVal: string) => {
+    changeInherentSongAttribute(songId, "title", newVal);
+  };
+  const editArtist = (songId: string) => (oldVal: string, newVal: string) => {
+    changeInherentSongAttribute(songId, "artist", newVal);
+  };
+  const editNotes = (songId: string) => (oldVal: string, newVal: string) => {
+    changeInherentSongAttribute(songId, "notes", newVal);
+  };
+  const editDuration = (songId: string) => (oldVal: number, newVal: number) => {
+    changeInherentSongAttribute(songId, "length", newVal);
+  };
+
+  const deleteSong = (songId: string) => () => {
+    setSongs((songs) => songs?.filter((s) => s.id !== songId));
+  };
+
+  /***
+   * END INPUT HANDLERS
+   */
+
+  const CategoryHead = ({ id, title, show, type, valueRange }: category) => {
     return <TableHead key={`category-${id}`}>{title}</TableHead>;
   };
 
-  const songRow = ({ id, title, artist, length, notes, properties }: song) => {
+  const StringInput = ({ editing, value, onChange }: InputProps<string>) => {
+    if (!editing) return <>{value}</>;
+
+    return (
+      <Input value={value} onChange={(e) => onChange(value, e.target.value)} />
+    );
+  };
+
+  const BooleanProperty = (
+    editing: boolean,
+    category: category,
+    song: song
+  ) => {
+    if (!editing) return !!song.properties[category.id] ? <Check /> : <X />;
+
+    return <Checkbox checked={song.properties[category.id]} />;
+  };
+
+  const NumberProperty = (editing: boolean, category: category, song: song) => {
+    if (!editing) return song.properties[category.id];
+
+    return (
+      <Input
+        type="number"
+        className="w-20"
+        value={song.properties[category.id]}
+        min={Math.min(...category.valueRange)}
+        max={Math.max(...category.valueRange)}
+      />
+    );
+  };
+
+  const StringProperty = (editing: boolean, category: category, song: song) => {
+    if (!editing) return song.properties[category.id];
+
+    return (
+      <Select defaultValue={song.properties[category.id] || "clear"}>
+        <SelectTrigger>
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectGroup>
+            <SelectItem value="clear">(select)</SelectItem>
+            {category.valueRange.map((v) => (
+              <SelectItem key={v} value={v}>
+                {v}
+              </SelectItem>
+            ))}
+          </SelectGroup>
+        </SelectContent>
+      </Select>
+    );
+  };
+
+  const MultipleStringProperty = (
+    editing: boolean,
+    category: category,
+    song: song
+  ) => {
+    if (!editing) return song.properties[category.id]?.join(", ");
+
+    return <></>;
+  };
+
+  const PropertyInput = (editing: boolean, category: category, song: song) => {
+    switch (category.type) {
+      case "booleanCategory":
+        return BooleanProperty(editing, category, song);
+      case "numberCategory":
+        return NumberProperty(editing, category, song);
+      case "stringCategory":
+        return StringProperty(editing, category, song);
+      case "multipleStringCategory":
+        return MultipleStringProperty(editing, category, song);
+      default:
+        return <>{category.type} not implemented!</>;
+    }
+  };
+
+  const DurationInput = ({ editing, value, onChange }: InputProps<number>) => {
+    const m = Math.floor(value / 60);
+    const s = value % 60;
+
+    if (!editing) {
+      return (
+        <>
+          {m}m {s}s
+        </>
+      );
+    }
+
+    const minuteChange = (newVal: number) => {
+      onChange(value, Math.max(0, newVal * 60 + s));
+    };
+    const secondChange = (newVal: number) => {
+      onChange(value, Math.max(0, m * 60 + newVal));
+    };
+
+    return (
+      <>
+        <Input
+          className="w-20"
+          type="number"
+          value={m}
+          min={0}
+          onChange={(e) => minuteChange(Number(e.target.value))}
+        />
+        m{" "}
+        <Input
+          className="w-20"
+          type="number"
+          value={s}
+          min={m === 0 ? 0 : undefined}
+          onChange={(e) => secondChange(Number(e.target.value))}
+        />
+        s
+      </>
+    );
+  };
+
+  const SongRow = (song: song) => {
+    const { id, title, artist, length, notes, properties } = song;
+    const editing = editingSong === id;
     return (
       <TableRow key={`song-${id}`}>
-        <TableCell>{title}</TableCell>
-        <TableCell>{artist}</TableCell>
-        <TableCell>{length}</TableCell>
+        <TableCell>
+          {StringInput({ editing, value: title, onChange: editTtile(id) })}
+        </TableCell>
+        <TableCell>
+          {StringInput({ editing, value: artist, onChange: editArtist(id) })}
+        </TableCell>
+        <TableCell>
+          {DurationInput({
+            editing,
+            value: length,
+            onChange: editDuration(id),
+          })}
+        </TableCell>
         {categories
           ?.filter(({ show }) => show)
-          .map((c) => (
-            <TableCell key={`property-${id}-${c.id}`}>
-              {properties[c.id]}
+          .map((category) => (
+            <TableCell key={`property-${id}-${category.id}`}>
+              {PropertyInput(editing, category, song)}
             </TableCell>
           ))}
-        <TableCell>{notes}</TableCell>
+        <TableCell>
+          {StringInput({ editing, value: notes, onChange: editNotes(id) })}
+        </TableCell>
         <TableCell className="w-fit">
           <ButtonGroup>
             {editingSong === id ? (
               <Button
                 onClick={() => setEditingSong(undefined)}
                 className="border"
-                // variant={"secondary"}
               >
                 <Check /> Done
               </Button>
@@ -93,6 +285,7 @@ export default function EditRepertoire() {
             <Button
               className="hover:bg-red-600/80 border"
               variant={"secondary"}
+              onClick={deleteSong(id)}
             >
               <Trash2 />
               Delete
@@ -120,7 +313,7 @@ export default function EditRepertoire() {
               <TableHead>Song Title</TableHead>
               <TableHead>Artist</TableHead>
               <TableHead>Length</TableHead>
-              {categories?.filter(({ show }) => show).map(categoryHead)}
+              {categories?.filter(({ show }) => show).map(CategoryHead)}
               <TableHead>Notes</TableHead>
               <TableHead className="w-fit">
                 <Button className="border" variant={"secondary"}>
@@ -130,8 +323,10 @@ export default function EditRepertoire() {
               </TableHead>
             </TableRow>
           </TableHeader>
-          <TableBody>{songs?.map(songRow)}</TableBody>
+          <TableBody>{songs?.map(SongRow)}</TableBody>
         </Table>
+        {/* {JSON.stringify(songs, undefined, 2)} */}
+        {/* {JSON.stringify(categories, undefined, 2)} */}
       </div>
     </div>
   );
