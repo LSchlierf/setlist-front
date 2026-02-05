@@ -18,7 +18,6 @@ function App() {
 
   const refetchUserData = () => {
     if (!loggedIn) return;
-    console.log("refetching user data");
     storage.getSetlists().then(setSetlists);
     storage.getRepertoireSize().then(setRepertoireSize);
   };

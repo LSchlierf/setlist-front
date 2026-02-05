@@ -68,7 +68,7 @@ type song = {
 type InputProps<T> = {
   editing: boolean;
   value: T;
-  onChange: (oldVal: T, newVal: T) => void;
+  onChange: (newVal: T) => void;
 };
 
 export default function EditRepertoire() {
@@ -188,19 +188,18 @@ export default function EditRepertoire() {
         return newSong;
       })
     );
-    console.log(newSong);
   };
 
-  const editTtile = (songId: string) => (oldVal: string, newVal: string) => {
+  const editTtile = (songId: string) => (newVal: string) => {
     changeInherentSongAttribute(songId, "title", newVal);
   };
-  const editArtist = (songId: string) => (oldVal: string, newVal: string) => {
+  const editArtist = (songId: string) => (newVal: string) => {
     changeInherentSongAttribute(songId, "artist", newVal);
   };
-  const editNotes = (songId: string) => (oldVal: string, newVal: string) => {
+  const editNotes = (songId: string) => (newVal: string) => {
     changeInherentSongAttribute(songId, "notes", newVal);
   };
-  const editDuration = (songId: string) => (oldVal: number, newVal: number) => {
+  const editDuration = (songId: string) => (newVal: number) => {
     changeInherentSongAttribute(songId, "length", newVal);
   };
 
@@ -306,9 +305,7 @@ export default function EditRepertoire() {
   const StringInput = ({ editing, value, onChange }: InputProps<string>) => {
     if (!editing) return <>{value}</>;
 
-    return (
-      <Input value={value} onChange={(e) => onChange(value, e.target.value)} />
-    );
+    return <Input value={value} onChange={(e) => onChange(e.target.value)} />;
   };
 
   const changeSimpleSongProperty = (
@@ -477,10 +474,10 @@ export default function EditRepertoire() {
     }
 
     const minuteChange = (newVal: number) => {
-      onChange(value, Math.max(0, newVal * 60 + s));
+      onChange(Math.max(0, newVal * 60 + s));
     };
     const secondChange = (newVal: number) => {
-      onChange(value, Math.max(0, m * 60 + newVal));
+      onChange(Math.max(0, m * 60 + newVal));
     };
 
     return (
@@ -580,7 +577,7 @@ export default function EditRepertoire() {
   const CategoryCard = (category: category) => {
     const { id, title, type, show } = category;
     return (
-      <Card className="w-full">
+      <Card key={category.id} className="w-full">
         <CardContent>
           <div className="flex flex-col gap-2">
             <div className="font-bold">{title}</div>
@@ -638,6 +635,16 @@ export default function EditRepertoire() {
       setSongs(byCategory(asc, categoryId, categoryType));
     };
 
+  const totalLength = () => {
+    const len =
+      songs?.reduce((acc: number, song: song) => acc + song.length, 0) || 0;
+
+    const h = Math.floor(len / 3600);
+    const m = Math.floor(len / 60) % 60;
+    const s = len % 60;
+    return `${h}h ${m}m ${s}s`;
+  };
+
   return (
     <div className="min-h-screen w-screen bg-gray-950">
       <Header
@@ -648,9 +655,9 @@ export default function EditRepertoire() {
         }
         onLogin={(loggedIn) => !loggedIn && backToMainPage()}
       />
-      <div className="flex flex-col gap-8 pt-8 px-30 overflow-x-auto">
+      <div className="flex flex-col gap-8 pt-8 px-30">
         <div className="font-bold text-2xl">Your Repertoire:</div>
-        <Table>
+        <Table className="relative">
           <TableHeader>
             <TableRow>
               <InherentPropertyHead
@@ -671,9 +678,14 @@ export default function EditRepertoire() {
               {categories
                 ?.filter(({ show }) => show)
                 .map((c) => (
-                  <CategoryHead {...c} sort={sortByCategory(c.id, c.type)} />
+                  <CategoryHead
+                    key={c.id}
+                    {...c}
+                    sort={sortByCategory(c.id, c.type)}
+                  />
                 ))}
               <TableHead>Notes</TableHead>
+              <TableHead />
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -688,6 +700,7 @@ export default function EditRepertoire() {
             </TableRow>
           </TableBody>
         </Table>
+        {songs?.length} Songs, {totalLength()} total.
         <div className="flex flex-col gap-6">
           <div className="font-bold text-2xl">Your Custom Categories:</div>
           <div className="grid gap-6 grid-cols-7">
