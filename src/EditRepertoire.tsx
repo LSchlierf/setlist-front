@@ -1,6 +1,17 @@
 import { Link, useNavigate } from "react-router";
 import Header from "./components/Header";
-import { ArrowLeft, Check, Pen, Plus, Trash2, X } from "lucide-react";
+import {
+  ArrowDownAZ,
+  ArrowLeft,
+  ArrowUpAz,
+  ArrowUpDown,
+  ArrowUpZA,
+  Check,
+  Pen,
+  Plus,
+  Trash2,
+  X,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 import storage from "./lib/storage";
 import {
@@ -30,12 +41,18 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "./components/ui/dropdown-menu";
+import { Card, CardContent, CardHeader } from "./components/ui/card";
+import { byArtist, byCategory, byLength, byTitle } from "./lib/songSort";
 
 type category = {
   id: string;
   title: string;
   show: boolean;
-  type: string;
+  type:
+    | "booleanCategory"
+    | "numberCategory"
+    | "stringCategory"
+    | "multipleStringCategory";
   valueRange: any[];
 };
 
@@ -66,6 +83,9 @@ export default function EditRepertoire() {
     undefined
   );
   const [dialogOpen, setDialogOpen] = useState<boolean>(false);
+  const [sorting, setSorting] = useState<
+    { field: String; asc: boolean } | undefined
+  >({ field: "title", asc: true });
 
   const backToMainPage = () => {
     navigate("/");
@@ -77,7 +97,6 @@ export default function EditRepertoire() {
   };
 
   const handleSongUpdate = (newSong: any) => {
-    console.log("got song update:", newSong);
     setSongs((songs) =>
       songs?.map((s) => {
         if (s.id !== newSong.id) return s;
@@ -87,8 +106,22 @@ export default function EditRepertoire() {
   };
 
   const handleSongDelete = (deletedSongId: string) => {
-    console.log("song was deleted:", deletedSongId);
     setSongs((songs) => songs?.filter((s) => s.id !== deletedSongId));
+  };
+
+  const handleCategoryUpdate = (newCategory: category) => {
+    setCategories((categories) =>
+      categories?.map((c) => {
+        if (c.id !== newCategory.id) return c;
+        return newCategory;
+      })
+    );
+  };
+
+  const handleCategoryDelete = (categoryId: string) => {
+    setCategories((categories) =>
+      categories?.filter((c) => c.id !== categoryId)
+    );
   };
 
   useEffect(() => {
@@ -98,10 +131,14 @@ export default function EditRepertoire() {
       storage.socket?.on("repertoire", refetchUserData);
       storage.socket?.on("repertoire:updateSong", handleSongUpdate);
       storage.socket?.on("repertoire:deleteSong", handleSongDelete);
+      storage.socket?.on("repertoire:updateCategory", handleCategoryUpdate);
+      storage.socket?.on("repertoire:deleteCategory", handleCategoryDelete);
     });
     document.title = "Repertoire";
 
     return () => {
+      storage.socket?.off("repertoire:deleteCategory", handleCategoryDelete);
+      storage.socket?.off("repertoire:updateCategory", handleCategoryUpdate);
       storage.socket?.off("repertoire:deleteSong", handleSongDelete);
       storage.socket?.off("repertoire:updateSong", handleSongUpdate);
       storage.socket?.off("repertoire", refetchUserData);
@@ -112,6 +149,21 @@ export default function EditRepertoire() {
     storage.socket?.emit("repertoire:updateSong", song);
     setEditingSong(undefined);
     setEditedSongBefore(undefined);
+  };
+
+  const deleteSong = (songId: string) => () => {
+    storage.socket?.emit("repertoire:deleteSong", songId);
+    setSongs((songs) => songs?.filter((s) => s.id !== songId));
+  };
+
+  const editCategory = (category: category) => {
+    storage.socket?.emit("repertoire:updateCategory", category);
+    handleCategoryUpdate(category);
+  };
+
+  const deleteCategory = (categoryId: string) => {
+    storage.socket?.emit("repertoire:deleteCategory", categoryId);
+    handleCategoryDelete(categoryId);
   };
 
   /***
@@ -152,17 +204,103 @@ export default function EditRepertoire() {
     changeInherentSongAttribute(songId, "length", newVal);
   };
 
-  const deleteSong = (songId: string) => () => {
-    storage.socket?.emit("repertoire:deleteSong", songId);
-    setSongs((songs) => songs?.filter((s) => s.id !== songId));
-  };
-
   /***
    * END INPUT HANDLERS
    */
 
-  const CategoryHead = ({ id, title, show, type, valueRange }: category) => {
-    return <TableHead key={`category-${id}`}>{title}</TableHead>;
+  const CategoryHead = ({
+    id,
+    title,
+    show,
+    type,
+    valueRange,
+    sort,
+  }: category & { sort: (asc: boolean) => void }) => {
+    const isSortedByThis = sorting?.field === id;
+    const isSortedAsc = sorting?.asc;
+
+    return (
+      <TableHead key={`category-${id}`}>
+        <div className="flex flex-row items-center gap-2">
+          {title}
+          <Button
+            onClick={() => {
+              if (!isSortedByThis) {
+                setSorting({ field: id, asc: true });
+                sort(true);
+                return;
+              }
+              if (isSortedAsc) {
+                setSorting({ field: id, asc: false });
+                sort(false);
+                return;
+              }
+              setSorting(undefined);
+            }}
+            className="border"
+            variant={"secondary"}
+          >
+            {isSortedByThis ? (
+              isSortedAsc ? (
+                <ArrowDownAZ />
+              ) : (
+                <ArrowUpZA />
+              )
+            ) : (
+              <ArrowUpDown />
+            )}
+          </Button>
+        </div>
+      </TableHead>
+    );
+  };
+
+  const InherentPropertyHead = ({
+    title,
+    field,
+    sort,
+  }: {
+    title: string;
+    field: string;
+    sort: (asc: boolean) => void;
+  }) => {
+    const isSortedByThis = sorting?.field === field;
+    const isSortedAsc = sorting?.asc;
+
+    return (
+      <TableHead key={field}>
+        <div className="flex flex-row items-center gap-2">
+          {title}
+          <Button
+            onClick={() => {
+              if (!isSortedByThis) {
+                setSorting({ field, asc: true });
+                sort(true);
+                return;
+              }
+              if (isSortedAsc) {
+                setSorting({ field, asc: false });
+                sort(false);
+                return;
+              }
+              setSorting(undefined);
+            }}
+            className="border"
+            variant={"secondary"}
+          >
+            {isSortedByThis ? (
+              isSortedAsc ? (
+                <ArrowDownAZ />
+              ) : (
+                <ArrowUpAz />
+              )
+            ) : (
+              <ArrowUpDown />
+            )}
+          </Button>
+        </div>
+      </TableHead>
+    );
   };
 
   const StringInput = ({ editing, value, onChange }: InputProps<string>) => {
@@ -289,7 +427,7 @@ export default function EditRepertoire() {
                       if (v === value) {
                         return c;
                       }
-                      return s.properties[category.id].includes(v);
+                      return s.properties[category.id]?.includes(v) || false;
                     });
 
                     return {
@@ -432,6 +570,74 @@ export default function EditRepertoire() {
     );
   };
 
+  const categoryTypeLabels = {
+    booleanCategory: "Yes/No",
+    numberCategory: "Number",
+    stringCategory: "Select",
+    multipleStringCategory: "Multiselect",
+  };
+
+  const CategoryCard = (category: category) => {
+    const { id, title, type, show } = category;
+    return (
+      <Card className="w-full">
+        <CardContent>
+          <div className="flex flex-col gap-2">
+            <div className="font-bold">{title}</div>
+            <div className="flex flex-row justify-between items-center">
+              Type:
+              <span>{categoryTypeLabels[type] || ""}</span>
+            </div>
+            <div className="flex flex-row justify-between items-center">
+              Show:
+              <Checkbox
+                checked={show}
+                onCheckedChange={(checked) =>
+                  editCategory({
+                    ...category,
+                    show: checked as boolean,
+                  })
+                }
+              />
+            </div>
+            <Button
+              className="w-full hover:bg-red-600/80 border"
+              variant={"secondary"}
+              onClick={() => deleteCategory(id)}
+            >
+              <Trash2 /> Delete
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
+
+  const NewCategoryCard = () => {
+    return (
+      <Card className="w-full flex flex-col justify-center items-center border-dashed hover:bg-gray-800/50 hover:cursor-pointer">
+        <Plus />
+      </Card>
+    );
+  };
+
+  const sortByTitle = (asc: boolean) => {
+    setSongs(byTitle(asc));
+  };
+
+  const sortByArtist = (asc: boolean) => {
+    setSongs(byArtist(asc));
+  };
+
+  const sortByLength = (asc: boolean) => {
+    setSongs(byLength(asc));
+  };
+
+  const sortByCategory =
+    (categoryId: string, categoryType: string) => (asc: boolean) => {
+      setSongs(byCategory(asc, categoryId, categoryType));
+    };
+
   return (
     <div className="min-h-screen w-screen bg-gray-950">
       <Header
@@ -443,24 +649,52 @@ export default function EditRepertoire() {
         onLogin={(loggedIn) => !loggedIn && backToMainPage()}
       />
       <div className="flex flex-col gap-8 pt-8 px-30 overflow-x-auto">
+        <div className="font-bold text-2xl">Your Repertoire:</div>
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Song Title</TableHead>
-              <TableHead>Artist</TableHead>
-              <TableHead>Length</TableHead>
-              {categories?.filter(({ show }) => show).map(CategoryHead)}
+              <InherentPropertyHead
+                title="Song Title"
+                field="title"
+                sort={sortByTitle}
+              />
+              <InherentPropertyHead
+                title="Artist"
+                field="artist"
+                sort={sortByArtist}
+              />
+              <InherentPropertyHead
+                title="Length"
+                field="duration"
+                sort={sortByLength}
+              />
+              {categories
+                ?.filter(({ show }) => show)
+                .map((c) => (
+                  <CategoryHead {...c} sort={sortByCategory(c.id, c.type)} />
+                ))}
               <TableHead>Notes</TableHead>
-              <TableHead className="w-fit">
-                <Button className="border" variant={"secondary"}>
-                  <Plus />
-                  Add Category
-                </Button>
-              </TableHead>
             </TableRow>
           </TableHeader>
-          <TableBody>{songs?.map(SongRow)}</TableBody>
+          <TableBody>
+            {songs?.map(SongRow)}
+            <TableRow>
+              <TableCell>
+                <Button className="border">
+                  <Plus />
+                  Add Song
+                </Button>
+              </TableCell>
+            </TableRow>
+          </TableBody>
         </Table>
+        <div className="flex flex-col gap-6">
+          <div className="font-bold text-2xl">Your Custom Categories:</div>
+          <div className="grid gap-6 grid-cols-7">
+            {categories?.map(CategoryCard)}
+            <NewCategoryCard />
+          </div>
+        </div>
         <Button onClick={() => setDialogOpen(true)} className="w-60">
           Import / Export Repertoire
         </Button>
