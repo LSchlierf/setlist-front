@@ -104,7 +104,7 @@ export default function RepertoireImportExportCard({
               Export to <code>.json</code>
             </Button>
             <Button onClick={downloadTXT} variant={"secondary"}>
-              Export title/artist to <code>.txt</code>
+              Export Title/Artist to <code>.txt</code>
             </Button>
           </div>
         </CardContent>
