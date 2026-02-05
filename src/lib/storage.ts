@@ -5,6 +5,14 @@ class storage {
   private static _user: { id: string; name: string } | undefined = undefined;
   private static _token: string | undefined = undefined;
 
+  static get user() {
+    return this._user;
+  }
+
+  static get socket() {
+    return this._socket;
+  }
+
   static async init() {
     this._token = localStorage.getItem("AUTH_TOKEN") || undefined;
     this._user = await this.testToken();
@@ -43,8 +51,17 @@ class storage {
     this._token = undefined;
   }
 
-  static get user() {
-    return this._user;
+  static async changePassword(oldPassword: string, newPassword: string) {
+    return await fetch("/api/user/changePassword", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${this._token}`,
+      },
+      body: JSON.stringify({ oldPassword, newPassword }),
+    })
+      .then((response) => response.ok)
+      .catch(() => false);
   }
 
   static async getSetlists() {
@@ -115,6 +132,29 @@ class storage {
     })
       .then((response) => response.json())
       .catch(() => undefined);
+  }
+
+  static async getFullRepertoire() {
+    return await fetch("/api/user/repertoire/export", {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+        Authorization: `Bearer ${this._token}`,
+      },
+    })
+      .then((response) => response.json())
+      .catch(() => undefined);
+  }
+
+  static async ingestRepertoire(repertoire: string) {
+    await fetch("/api/user/repertoire/ingest", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${this._token}`,
+      },
+      body: repertoire,
+    }).then();
   }
 
   // static async getRepertoire() {

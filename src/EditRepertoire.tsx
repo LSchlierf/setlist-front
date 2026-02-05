@@ -23,6 +23,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "./components/ui/select";
+import RepertoireImportExportCard from "./components/RepertoireImportExportCard";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "./components/ui/dropdown-menu";
 
 type category = {
   id: string;
@@ -55,19 +62,57 @@ export default function EditRepertoire() {
     undefined
   );
   const [editingSong, setEditingSong] = useState<string | undefined>(undefined);
+  const [editedSongBefore, setEditedSongBefore] = useState<song | undefined>(
+    undefined
+  );
+  const [dialogOpen, setDialogOpen] = useState<boolean>(false);
 
   const backToMainPage = () => {
     navigate("/");
   };
 
+  const refetchUserData = () => {
+    storage.getSongs().then(setSongs);
+    storage.getCategories().then(setCategories);
+  };
+
+  const handleSongUpdate = (newSong: any) => {
+    console.log("got song update:", newSong);
+    setSongs((songs) =>
+      songs?.map((s) => {
+        if (s.id !== newSong.id) return s;
+        return newSong;
+      })
+    );
+  };
+
+  const handleSongDelete = (deletedSongId: string) => {
+    console.log("song was deleted:", deletedSongId);
+    setSongs((songs) => songs?.filter((s) => s.id !== deletedSongId));
+  };
+
   useEffect(() => {
     storage.init().then((v) => {
       if (!v) backToMainPage();
-      storage.getSongs().then(setSongs);
-      storage.getCategories().then(setCategories);
+      refetchUserData();
+      storage.socket?.on("repertoire", refetchUserData);
+      storage.socket?.on("repertoire:updateSong", handleSongUpdate);
+      storage.socket?.on("repertoire:deleteSong", handleSongDelete);
     });
     document.title = "Repertoire";
+
+    return () => {
+      storage.socket?.off("repertoire:deleteSong", handleSongDelete);
+      storage.socket?.off("repertoire:updateSong", handleSongUpdate);
+      storage.socket?.off("repertoire", refetchUserData);
+    };
   }, []);
+
+  const finishEditingSong = (song: song) => {
+    storage.socket?.emit("repertoire:updateSong", song);
+    setEditingSong(undefined);
+    setEditedSongBefore(undefined);
+  };
 
   /***
    * START INPUT HANDLERS
@@ -80,15 +125,18 @@ export default function EditRepertoire() {
     attribute: "title" | "artist" | "length" | "notes",
     newVal: string | number
   ) => {
+    let newSong;
     setSongs((songs) =>
       songs?.map((s) => {
         if (s.id !== songId) return s;
-        return {
+        newSong = {
           ...s,
           [attribute]: newVal,
         };
+        return newSong;
       })
     );
+    console.log(newSong);
   };
 
   const editTtile = (songId: string) => (oldVal: string, newVal: string) => {
@@ -105,6 +153,7 @@ export default function EditRepertoire() {
   };
 
   const deleteSong = (songId: string) => () => {
+    storage.socket?.emit("repertoire:deleteSong", songId);
     setSongs((songs) => songs?.filter((s) => s.id !== songId));
   };
 
@@ -124,6 +173,25 @@ export default function EditRepertoire() {
     );
   };
 
+  const changeSimpleSongProperty = (
+    songId: string,
+    categoryId: string,
+    newValue: any
+  ) => {
+    setSongs((songs) =>
+      songs?.map((s) => {
+        if (s.id !== songId) return s;
+        return {
+          ...s,
+          properties: {
+            ...s.properties,
+            [categoryId]: newValue,
+          },
+        };
+      })
+    );
+  };
+
   const BooleanProperty = (
     editing: boolean,
     category: category,
@@ -131,7 +199,14 @@ export default function EditRepertoire() {
   ) => {
     if (!editing) return !!song.properties[category.id] ? <Check /> : <X />;
 
-    return <Checkbox checked={song.properties[category.id]} />;
+    return (
+      <Checkbox
+        checked={song.properties[category.id]}
+        onCheckedChange={(c) => {
+          changeSimpleSongProperty(song.id, category.id, c);
+        }}
+      />
+    );
   };
 
   const NumberProperty = (editing: boolean, category: category, song: song) => {
@@ -144,6 +219,13 @@ export default function EditRepertoire() {
         value={song.properties[category.id]}
         min={Math.min(...category.valueRange)}
         max={Math.max(...category.valueRange)}
+        onChange={(e) => {
+          changeSimpleSongProperty(
+            song.id,
+            category.id,
+            Number(e.target.value)
+          );
+        }}
       />
     );
   };
@@ -152,7 +234,16 @@ export default function EditRepertoire() {
     if (!editing) return song.properties[category.id];
 
     return (
-      <Select defaultValue={song.properties[category.id] || "clear"}>
+      <Select
+        defaultValue={song.properties[category.id] || "clear"}
+        onValueChange={(v) => {
+          changeSimpleSongProperty(
+            song.id,
+            category.id,
+            v === "clear" ? undefined : v
+          );
+        }}
+      >
         <SelectTrigger>
           <SelectValue />
         </SelectTrigger>
@@ -177,7 +268,47 @@ export default function EditRepertoire() {
   ) => {
     if (!editing) return song.properties[category.id]?.join(", ");
 
-    return <></>;
+    return (
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant={"secondary"} className="ml-auto">
+            Select
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent>
+          {category.valueRange.map((value) => (
+            <DropdownMenuCheckboxItem
+              key={value}
+              checked={!!song.properties[category.id]?.includes(value)}
+              onCheckedChange={(c) => {
+                setSongs((songs) =>
+                  songs?.map((s) => {
+                    if (s.id !== song.id) return s;
+
+                    const newProperty = category.valueRange.filter((v) => {
+                      if (v === value) {
+                        return c;
+                      }
+                      return s.properties[category.id].includes(v);
+                    });
+
+                    return {
+                      ...s,
+                      properties: {
+                        ...s.properties,
+                        [category.id]: newProperty,
+                      },
+                    };
+                  })
+                );
+              }}
+            >
+              {value}
+            </DropdownMenuCheckboxItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    );
   };
 
   const PropertyInput = (editing: boolean, category: category, song: song) => {
@@ -268,14 +399,19 @@ export default function EditRepertoire() {
           <ButtonGroup>
             {editingSong === id ? (
               <Button
-                onClick={() => setEditingSong(undefined)}
+                onClick={() => {
+                  finishEditingSong(song);
+                }}
                 className="border"
               >
                 <Check /> Done
               </Button>
             ) : (
               <Button
-                onClick={() => setEditingSong(id)}
+                onClick={() => {
+                  setEditedSongBefore(song);
+                  setEditingSong(id);
+                }}
                 className="border"
                 variant={"secondary"}
               >
@@ -325,9 +461,21 @@ export default function EditRepertoire() {
           </TableHeader>
           <TableBody>{songs?.map(SongRow)}</TableBody>
         </Table>
+        <Button onClick={() => setDialogOpen(true)} className="w-60">
+          Import / Export Repertoire
+        </Button>
         {/* {JSON.stringify(songs, undefined, 2)} */}
         {/* {JSON.stringify(categories, undefined, 2)} */}
       </div>
+      {dialogOpen && (
+        <RepertoireImportExportCard
+          onRepertoireChange={() => {
+            refetchUserData();
+            storage.socket?.emit("repertoire");
+          }}
+          onClose={() => setDialogOpen(false)}
+        />
+      )}
     </div>
   );
 }

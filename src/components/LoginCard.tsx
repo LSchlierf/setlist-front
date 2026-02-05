@@ -21,9 +21,12 @@ export type LoginCardProps = {
 export default function LoginCard({ onClose, onLogin }: LoginCardProps) {
   const [loggedIn, setLoggedIn] = useState(storage.user !== undefined);
   const [login, setLogin] = useState(true);
+  const [changePw, setChangePw] = useState(false);
   const [error, setError] = useState<boolean | string>(false);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [newPassword1, setNewPassword1] = useState("");
+  const [newPassword2, setNewPassword2] = useState("");
 
   const doLogin = async () => {
     const response = await fetch("/api/login", {
@@ -73,7 +76,7 @@ export default function LoginCard({ onClose, onLogin }: LoginCardProps) {
   };
 
   const LogoutFrom = () => (
-    <Card className="w-full max-w-sm absolute top-[50%] left-[50%] transform-(--center-transform)">
+    <Card className="w-full max-w-sm fixed top-[50%] left-[50%] transform-(--center-transform)">
       <CardHeader>
         <CardTitle>Logged in as {storage.user?.name}</CardTitle>
       </CardHeader>
@@ -89,6 +92,81 @@ export default function LoginCard({ onClose, onLogin }: LoginCardProps) {
         >
           Log out
         </Button>
+        <Button
+          className="w-full"
+          onClick={() => setChangePw(true)}
+          variant={"secondary"}
+        >
+          Change Password
+        </Button>
+        <Button className="w-full" onClick={onClose} variant="secondary">
+          Close
+        </Button>
+      </CardFooter>
+    </Card>
+  );
+
+  const changePasswordForm = () => (
+    <Card className="w-full max-w-sm absolute top-[50%] left-[50%] transform-(--center-transform)">
+      <CardHeader>
+        <CardTitle>Change password for {storage.user?.name}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="flex flex-col gap-6">
+          <div className="grid gap-2">
+            <Label htmlFor="password">Old Password</Label>
+            <Input
+              id="password"
+              type="password"
+              placeholder="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            ></Input>
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="newPassword1">New Password</Label>
+            <Input
+              id="newPassword1"
+              type="password"
+              placeholder="Password"
+              value={newPassword1}
+              onChange={(e) => setNewPassword1(e.target.value)}
+            ></Input>
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="newPassword2">Repeat New Password</Label>
+            <Input
+              id="newPassword2"
+              type="password"
+              placeholder="Password"
+              value={newPassword2}
+              onChange={(e) => setNewPassword2(e.target.value)}
+            ></Input>
+          </div>
+          {newPassword2.length > 0 &&
+            (newPassword1 === newPassword2
+              ? "New Passwords match"
+              : "New Passwords don't match")}
+
+          <Button
+            disabled={
+              password.length < 1 ||
+              newPassword1.length < 6 ||
+              newPassword1 !== newPassword2
+            }
+            onClick={() =>
+              storage
+                .changePassword(password, newPassword1)
+                .then((v) =>
+                  v ? onClose() : setError("Error while changing password")
+                )
+            }
+          >
+            Submit
+          </Button>
+        </div>
+      </CardContent>
+      <CardFooter>
         <Button className="w-full" onClick={onClose} variant="secondary">
           Close
         </Button>
@@ -124,7 +202,11 @@ export default function LoginCard({ onClose, onLogin }: LoginCardProps) {
   return error ? (
     <ErrorForm />
   ) : loggedIn ? (
-    <LogoutFrom />
+    changePw ? (
+      changePasswordForm()
+    ) : (
+      <LogoutFrom />
+    )
   ) : (
     <Card className="w-full max-w-sm absolute top-[50%] left-[50%] transform-(--center-transform)">
       <CardHeader>
