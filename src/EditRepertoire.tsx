@@ -43,33 +43,9 @@ import {
 } from "./components/ui/dropdown-menu";
 import { Card, CardContent, CardHeader } from "./components/ui/card";
 import { byArtist, byCategory, byLength, byTitle } from "./lib/songSort";
-
-type category = {
-  id: string;
-  title: string;
-  show: boolean;
-  type:
-    | "booleanCategory"
-    | "numberCategory"
-    | "stringCategory"
-    | "multipleStringCategory";
-  valueRange: any[];
-};
-
-type song = {
-  id: string;
-  title: string;
-  artist: string;
-  length: number;
-  notes: string;
-  properties: { [key: string]: any };
-};
-
-type InputProps<T> = {
-  editing: boolean;
-  value: T;
-  onChange: (newVal: T) => void;
-};
+import type { category, InputProps, song } from "./types";
+import NewSongCard from "./components/NewSongCard";
+import DurationInput from "./components/DurationInput";
 
 export default function EditRepertoire() {
   const navigate = useNavigate();
@@ -83,8 +59,9 @@ export default function EditRepertoire() {
     undefined
   );
   const [dialogOpen, setDialogOpen] = useState<boolean>(false);
+  const [newSongDialogOpen, setNewSongDialogOpen] = useState<boolean>(false);
   const [sorting, setSorting] = useState<
-    { field: String; asc: boolean } | undefined
+    { field: string; asc: boolean } | undefined
   >({ field: "title", asc: true });
 
   const backToMainPage = () => {
@@ -96,7 +73,30 @@ export default function EditRepertoire() {
     storage.getCategories().then(setCategories);
   };
 
-  const handleSongUpdate = (newSong: any) => {
+  const handleSongCreate = (newSong: song) => {
+    setSongs((songs) => [...(songs || []), newSong]);
+    if (!!sorting) {
+      switch (sorting.field) {
+        case "title":
+          sortByTitle(sorting.asc);
+          return;
+        case "artist":
+          sortByArtist(sorting.asc);
+          return;
+        case "duration":
+          sortByLength(sorting.asc);
+          return;
+        default:
+          let category = categories?.find((c) => c.id === sorting.field);
+          if (!!category) {
+            sortByCategory(sorting.field, category.type)(sorting.asc);
+          }
+          return;
+      }
+    }
+  };
+
+  const handleSongUpdate = (newSong: song) => {
     setSongs((songs) =>
       songs?.map((s) => {
         if (s.id !== newSong.id) return s;
@@ -129,21 +129,29 @@ export default function EditRepertoire() {
       if (!v) backToMainPage();
       refetchUserData();
       storage.socket?.on("repertoire", refetchUserData);
+      storage.socket?.on("repertoire:addSong", handleSongCreate);
       storage.socket?.on("repertoire:updateSong", handleSongUpdate);
       storage.socket?.on("repertoire:deleteSong", handleSongDelete);
       storage.socket?.on("repertoire:updateCategory", handleCategoryUpdate);
       storage.socket?.on("repertoire:deleteCategory", handleCategoryDelete);
     });
-    document.title = "Repertoire";
 
+    document.title = "Repertoire";
+    
     return () => {
       storage.socket?.off("repertoire:deleteCategory", handleCategoryDelete);
       storage.socket?.off("repertoire:updateCategory", handleCategoryUpdate);
       storage.socket?.off("repertoire:deleteSong", handleSongDelete);
       storage.socket?.off("repertoire:updateSong", handleSongUpdate);
+      storage.socket?.off("repertoire:addSong", handleSongCreate);
       storage.socket?.off("repertoire", refetchUserData);
     };
   }, []);
+
+  const addSong = (newSong: song) => {
+    storage.socket?.emit("repertoire:addSong", newSong);
+    handleSongCreate(newSong);
+  };
 
   const finishEditingSong = (song: song) => {
     storage.socket?.emit("repertoire:updateSong", song);
@@ -461,47 +469,6 @@ export default function EditRepertoire() {
     }
   };
 
-  const DurationInput = ({ editing, value, onChange }: InputProps<number>) => {
-    const m = Math.floor(value / 60);
-    const s = value % 60;
-
-    if (!editing) {
-      return (
-        <>
-          {m}m {s}s
-        </>
-      );
-    }
-
-    const minuteChange = (newVal: number) => {
-      onChange(Math.max(0, newVal * 60 + s));
-    };
-    const secondChange = (newVal: number) => {
-      onChange(Math.max(0, m * 60 + newVal));
-    };
-
-    return (
-      <>
-        <Input
-          className="w-20"
-          type="number"
-          value={m}
-          min={0}
-          onChange={(e) => minuteChange(Number(e.target.value))}
-        />
-        m{" "}
-        <Input
-          className="w-20"
-          type="number"
-          value={s}
-          min={m === 0 ? 0 : undefined}
-          onChange={(e) => secondChange(Number(e.target.value))}
-        />
-        s
-      </>
-    );
-  };
-
   const SongRow = (song: song) => {
     const { id, title, artist, length, notes, properties } = song;
     const editing = editingSong === id;
@@ -692,11 +659,23 @@ export default function EditRepertoire() {
             {songs?.map(SongRow)}
             <TableRow>
               <TableCell>
-                <Button className="border">
+                <Button
+                  onClick={() => setNewSongDialogOpen(true)}
+                  className="border"
+                >
                   <Plus />
                   Add Song
                 </Button>
               </TableCell>
+              <TableCell />
+              <TableCell />
+              {categories
+                ?.filter(({ show }) => show)
+                .map(({ id }) => (
+                  <TableCell key={id} />
+                ))}
+              <TableCell />
+              <TableCell />
             </TableRow>
           </TableBody>
         </Table>
@@ -721,6 +700,12 @@ export default function EditRepertoire() {
             storage.socket?.emit("repertoire");
           }}
           onClose={() => setDialogOpen(false)}
+        />
+      )}
+      {newSongDialogOpen && (
+        <NewSongCard
+          onClose={() => setNewSongDialogOpen(false)}
+          onFinish={addSong}
         />
       )}
     </div>
