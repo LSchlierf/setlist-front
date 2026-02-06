@@ -76,7 +76,7 @@ export default function LoginCard({ onClose, onLogin }: LoginCardProps) {
   };
 
   const LogoutFrom = () => (
-    <Card className="w-full max-w-sm fixed top-[50%] left-[50%] transform-(--center-transform)">
+    <Card className="z-10 bg-gray-900 w-full max-w-sm fixed top-[50%] left-[50%] transform-(--center-transform)">
       <CardHeader>
         <CardTitle>Logged in as {storage.user?.name}</CardTitle>
       </CardHeader>
@@ -107,7 +107,7 @@ export default function LoginCard({ onClose, onLogin }: LoginCardProps) {
   );
 
   const changePasswordForm = () => (
-    <Card className="w-full max-w-sm absolute top-[50%] left-[50%] transform-(--center-transform)">
+    <Card className="z-10 bg-gray-900 w-full max-w-sm absolute top-[50%] left-[50%] transform-(--center-transform)">
       <CardHeader>
         <CardTitle>Change password for {storage.user?.name}</CardTitle>
       </CardHeader>
@@ -175,7 +175,7 @@ export default function LoginCard({ onClose, onLogin }: LoginCardProps) {
   );
 
   const ErrorForm = () => (
-    <Card className="w-full max-w-sm absolute top-[50%] left-[50%] transform-(--center-transform)">
+    <Card className="z-10 bg-gray-900 w-full max-w-sm absolute top-[50%] left-[50%] transform-(--center-transform)">
       <CardHeader>
         <CardTitle>Error</CardTitle>
         <CardDescription>
@@ -208,7 +208,7 @@ export default function LoginCard({ onClose, onLogin }: LoginCardProps) {
       <LogoutFrom />
     )
   ) : (
-    <Card className="w-full max-w-sm absolute top-[50%] left-[50%] transform-(--center-transform)">
+    <Card className="z-10 bg-gray-900 w-full max-w-sm absolute top-[50%] left-[50%] transform-(--center-transform)">
       <CardHeader>
         <CardTitle>{login ? "Log in to your Account" : "Sign up"}</CardTitle>
         <CardDescription>

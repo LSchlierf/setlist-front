@@ -23,3 +23,10 @@ export type InputProps<T> = {
   value: T;
   onChange: (newVal: T) => void;
 };
+
+export const categoryTypeLabels = {
+  booleanCategory: "Yes/No",
+  numberCategory: "Number",
+  stringCategory: "Select",
+  multipleStringCategory: "Multiselect",
+};

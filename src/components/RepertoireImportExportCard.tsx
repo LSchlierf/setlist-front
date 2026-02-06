@@ -74,7 +74,7 @@ export default function RepertoireImportExportCard({
   };
 
   return (
-    <Card className="w-full max-w-sm fixed top-[50%] left-[50%] transform-(--center-transform)">
+    <Card className="z-10 bg-gray-900 w-full max-w-sm fixed top-[50%] left-[50%] transform-(--center-transform)">
       <CardHeader>
         <CardTitle>Import / Export Repertoire</CardTitle>
       </CardHeader>

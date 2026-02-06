@@ -4,7 +4,7 @@ import storage from "./lib/storage";
 import SetlistCard, { type SetlistCardProps } from "./components/SetlistCard";
 import PseudoSetlistCard from "./components/PseudoSetlistCard";
 import { Button } from "./components/ui/button";
-import { Music, Plus } from "lucide-react";
+import { ArrowRight, Music, Plus } from "lucide-react";
 import { Link } from "react-router";
 
 function App() {
@@ -54,6 +54,7 @@ function App() {
                 <Button className="w-fit border" variant={"secondary"}>
                   <Music />
                   Edit Repertoire
+                  <ArrowRight />
                 </Button>
               </Link>
             </div>

@@ -12,7 +12,6 @@ import { v4 as uuid } from "uuid";
 import { Label } from "./ui/label";
 import { Input } from "./ui/input";
 import DurationInput from "./DurationInput";
-import { Newspaper } from "lucide-react";
 
 export type NewSongCardProps = {
   onFinish: (newSong: song) => void;
@@ -30,7 +29,7 @@ export default function NewSongCard({ onFinish, onClose }: NewSongCardProps) {
   });
 
   return (
-    <Card className="w-full w-fit fixed top-[50%] left-[50%] transform-(--center-transform)">
+    <Card className="z-10 bg-gray-900 w-fit fixed top-[50%] left-[50%] transform-(--center-transform)">
       <CardHeader>
         <CardTitle>New Song</CardTitle>
       </CardHeader>

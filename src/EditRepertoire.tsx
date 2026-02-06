@@ -41,11 +41,17 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "./components/ui/dropdown-menu";
-import { Card, CardContent, CardHeader } from "./components/ui/card";
+import { Card, CardContent } from "./components/ui/card";
 import { byArtist, byCategory, byLength, byTitle } from "./lib/songSort";
-import type { category, InputProps, song } from "./types";
+import {
+  categoryTypeLabels,
+  type category,
+  type InputProps,
+  type song,
+} from "./types";
 import NewSongCard from "./components/NewSongCard";
 import DurationInput from "./components/DurationInput";
+import NewCategoryCard from "./components/NewCategoryCard";
 
 export default function EditRepertoire() {
   const navigate = useNavigate();
@@ -60,6 +66,8 @@ export default function EditRepertoire() {
   );
   const [dialogOpen, setDialogOpen] = useState<boolean>(false);
   const [newSongDialogOpen, setNewSongDialogOpen] = useState<boolean>(false);
+  const [newCategoryDialogOpen, setNewCategoryDialogOpen] =
+    useState<boolean>(false);
   const [sorting, setSorting] = useState<
     { field: string; asc: boolean } | undefined
   >({ field: "title", asc: true });
@@ -109,6 +117,10 @@ export default function EditRepertoire() {
     setSongs((songs) => songs?.filter((s) => s.id !== deletedSongId));
   };
 
+  const handleCategoryCreate = (newCategory: category) => {
+    setCategories((categories) => [...(categories || []), newCategory]);
+  };
+
   const handleCategoryUpdate = (newCategory: category) => {
     setCategories((categories) =>
       categories?.map((c) => {
@@ -132,15 +144,17 @@ export default function EditRepertoire() {
       storage.socket?.on("repertoire:addSong", handleSongCreate);
       storage.socket?.on("repertoire:updateSong", handleSongUpdate);
       storage.socket?.on("repertoire:deleteSong", handleSongDelete);
+      storage.socket?.on("repertoire:addCategory", handleCategoryCreate);
       storage.socket?.on("repertoire:updateCategory", handleCategoryUpdate);
       storage.socket?.on("repertoire:deleteCategory", handleCategoryDelete);
     });
 
     document.title = "Repertoire";
-    
+
     return () => {
       storage.socket?.off("repertoire:deleteCategory", handleCategoryDelete);
       storage.socket?.off("repertoire:updateCategory", handleCategoryUpdate);
+      storage.socket?.off("repertoire:addCategory", handleCategoryCreate);
       storage.socket?.off("repertoire:deleteSong", handleSongDelete);
       storage.socket?.off("repertoire:updateSong", handleSongUpdate);
       storage.socket?.off("repertoire:addSong", handleSongCreate);
@@ -162,6 +176,11 @@ export default function EditRepertoire() {
   const deleteSong = (songId: string) => () => {
     storage.socket?.emit("repertoire:deleteSong", songId);
     setSongs((songs) => songs?.filter((s) => s.id !== songId));
+  };
+
+  const addCategory = (newCategory: category) => {
+    storage.socket?.emit("repertoire:addCategory", newCategory);
+    handleCategoryCreate(newCategory);
   };
 
   const editCategory = (category: category) => {
@@ -218,9 +237,6 @@ export default function EditRepertoire() {
   const CategoryHead = ({
     id,
     title,
-    show,
-    type,
-    valueRange,
     sort,
   }: category & { sort: (asc: boolean) => void }) => {
     const isSortedByThis = sorting?.field === id;
@@ -470,7 +486,7 @@ export default function EditRepertoire() {
   };
 
   const SongRow = (song: song) => {
-    const { id, title, artist, length, notes, properties } = song;
+    const { id, title, artist, length, notes } = song;
     const editing = editingSong === id;
     return (
       <TableRow key={`song-${id}`}>
@@ -534,13 +550,6 @@ export default function EditRepertoire() {
     );
   };
 
-  const categoryTypeLabels = {
-    booleanCategory: "Yes/No",
-    numberCategory: "Number",
-    stringCategory: "Select",
-    multipleStringCategory: "Multiselect",
-  };
-
   const CategoryCard = (category: category) => {
     const { id, title, type, show } = category;
     return (
@@ -577,9 +586,12 @@ export default function EditRepertoire() {
     );
   };
 
-  const NewCategoryCard = () => {
+  const AddCategoryCard = () => {
     return (
-      <Card className="w-full flex flex-col justify-center items-center border-dashed hover:bg-gray-800/50 hover:cursor-pointer">
+      <Card
+        onClick={() => setNewCategoryDialogOpen(true)}
+        className="w-full flex flex-col justify-center items-center border-dashed hover:bg-gray-800/50 hover:cursor-pointer"
+      >
         <Plus />
       </Card>
     );
@@ -652,7 +664,7 @@ export default function EditRepertoire() {
                   />
                 ))}
               <TableHead>Notes</TableHead>
-              <TableHead />
+              <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -684,7 +696,7 @@ export default function EditRepertoire() {
           <div className="font-bold text-2xl">Your Custom Categories:</div>
           <div className="grid gap-6 grid-cols-7">
             {categories?.map(CategoryCard)}
-            <NewCategoryCard />
+            <AddCategoryCard />
           </div>
         </div>
         <Button onClick={() => setDialogOpen(true)} className="w-60">
@@ -692,6 +704,7 @@ export default function EditRepertoire() {
         </Button>
         {/* {JSON.stringify(songs, undefined, 2)} */}
         {/* {JSON.stringify(categories, undefined, 2)} */}
+        <div />
       </div>
       {dialogOpen && (
         <RepertoireImportExportCard
@@ -706,6 +719,12 @@ export default function EditRepertoire() {
         <NewSongCard
           onClose={() => setNewSongDialogOpen(false)}
           onFinish={addSong}
+        />
+      )}
+      {newCategoryDialogOpen && (
+        <NewCategoryCard
+          onClose={() => setNewCategoryDialogOpen(false)}
+          onFinish={addCategory}
         />
       )}
     </div>
