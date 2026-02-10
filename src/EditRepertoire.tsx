@@ -7,6 +7,7 @@ import {
   ArrowUpDown,
   ArrowUpZA,
   Check,
+  Palette,
   Pen,
   Plus,
   Trash2,
@@ -52,6 +53,12 @@ import {
 import NewSongCard from "./components/NewSongCard";
 import DurationInput from "./components/DurationInput";
 import NewCategoryCard from "./components/NewCategoryCard";
+import CategoryColorCard from "./components/CategoryColorCard";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "./components/ui/tooltip";
 
 export default function EditRepertoire() {
   const navigate = useNavigate();
@@ -68,6 +75,9 @@ export default function EditRepertoire() {
   const [newSongDialogOpen, setNewSongDialogOpen] = useState<boolean>(false);
   const [newCategoryDialogOpen, setNewCategoryDialogOpen] =
     useState<boolean>(false);
+  const [colorCategory, setColorCategory] = useState<category | undefined>(
+    undefined
+  );
   const [sorting, setSorting] = useState<
     { field: string; asc: boolean } | undefined
   >({ field: "title", asc: true });
@@ -136,6 +146,36 @@ export default function EditRepertoire() {
     );
   };
 
+  const handleColorUpdate = ({
+    categoryId,
+    colors,
+  }: {
+    categoryId: string;
+    colors: { [key: string]: string };
+  }) => {
+    setCategories((categories) =>
+      categories?.map((c) => {
+        if (c.id !== categoryId) return c;
+        return {
+          ...c,
+          colors: colors,
+        };
+      })
+    );
+  };
+
+  const handleColorDelete = (categoryId: string) => {
+    setCategories((categories) =>
+      categories?.map((c) => {
+        if (c.id !== categoryId) return c;
+        return {
+          ...c,
+          colors: undefined,
+        };
+      })
+    );
+  };
+
   useEffect(() => {
     storage.init().then((v) => {
       if (!v) backToMainPage();
@@ -147,11 +187,15 @@ export default function EditRepertoire() {
       storage.socket?.on("repertoire:addCategory", handleCategoryCreate);
       storage.socket?.on("repertoire:updateCategory", handleCategoryUpdate);
       storage.socket?.on("repertoire:deleteCategory", handleCategoryDelete);
+      storage.socket?.on("repertoire:setColors", handleColorUpdate);
+      storage.socket?.on("repertoire:deleteColors", handleColorDelete);
     });
 
     document.title = "Repertoire";
 
     return () => {
+      storage.socket?.off("repertoire:deleteColors", handleColorDelete);
+      storage.socket?.off("repertoire:setColors", handleColorUpdate);
       storage.socket?.off("repertoire:deleteCategory", handleCategoryDelete);
       storage.socket?.off("repertoire:updateCategory", handleCategoryUpdate);
       storage.socket?.off("repertoire:addCategory", handleCategoryCreate);
@@ -191,6 +235,16 @@ export default function EditRepertoire() {
   const deleteCategory = (categoryId: string) => {
     storage.socket?.emit("repertoire:deleteCategory", categoryId);
     handleCategoryDelete(categoryId);
+  };
+
+  const setColors = (categoryId: string, colors: { [key: string]: string }) => {
+    storage.socket?.emit("repertoire:setColors", { categoryId, colors });
+    handleColorUpdate({ categoryId, colors });
+  };
+
+  const deleteColors = (categoryId: string) => {
+    storage.socket?.emit("repertoire:deleteColors", categoryId);
+    handleColorDelete(categoryId);
   };
 
   /***
@@ -356,7 +410,11 @@ export default function EditRepertoire() {
     category: category,
     song: song
   ) => {
-    if (!editing) return !!song.properties[category.id] ? <Check /> : <X />;
+    if (!editing) {
+      if (song.properties[category.id] === undefined) return <></>;
+
+      return !!song.properties[category.id] ? <Check /> : <X />;
+    }
 
     return (
       <Checkbox
@@ -485,6 +543,17 @@ export default function EditRepertoire() {
     }
   };
 
+  const getTableCellStyle = (category: category, song: song) => {
+    if (!!category.colors && song.properties[category.id] !== undefined) {
+      return {
+        backgroundColor:
+          category.colors[song.properties[category.id].toString()],
+      };
+    }
+
+    return undefined;
+  };
+
   const SongRow = (song: song) => {
     const { id, title, artist, length, notes } = song;
     const editing = editingSong === id;
@@ -506,7 +575,10 @@ export default function EditRepertoire() {
         {categories
           ?.filter(({ show }) => show)
           .map((category) => (
-            <TableCell key={`property-${id}-${category.id}`}>
+            <TableCell
+              style={getTableCellStyle(category, song)}
+              key={`property-${id}-${category.id}`}
+            >
               {PropertyInput(editing, category, song)}
             </TableCell>
           ))}
@@ -551,7 +623,7 @@ export default function EditRepertoire() {
   };
 
   const CategoryCard = (category: category) => {
-    const { id, title, type, show } = category;
+    const { id, title, type, show, colors } = category;
     return (
       <Card key={category.id} className="w-full">
         <CardContent>
@@ -572,6 +644,46 @@ export default function EditRepertoire() {
                   })
                 }
               />
+            </div>
+            <div className="flex flex-row justify-between items-center">
+              Colors:
+              <ButtonGroup>
+                {type === "multipleStringCategory" ? (
+                  <Tooltip>
+                    <TooltipTrigger
+                      asChild
+                      className="disabled:pointer-events-auto"
+                    >
+                      <Button variant={"secondary"} disabled>
+                        <Palette />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      Colors aren't supported for this cateogry type.
+                    </TooltipContent>
+                  </Tooltip>
+                ) : (
+                  <Button
+                    onClick={() => {
+                      setColorCategory(category);
+                    }}
+                    variant={"secondary"}
+                  >
+                    <Palette />
+                  </Button>
+                )}
+                {!!colors && (
+                  <Button
+                    onClick={() => {
+                      deleteColors(id);
+                    }}
+                    variant={"secondary"}
+                    className="hover:bg-red-600/80"
+                  >
+                    <Trash2 />
+                  </Button>
+                )}
+              </ButtonGroup>
             </div>
             <Button
               className="w-full hover:bg-red-600/80 border"
@@ -725,6 +837,13 @@ export default function EditRepertoire() {
         <NewCategoryCard
           onClose={() => setNewCategoryDialogOpen(false)}
           onFinish={addCategory}
+        />
+      )}
+      {!!colorCategory && (
+        <CategoryColorCard
+          category={colorCategory}
+          onClose={() => setColorCategory(undefined)}
+          onFinish={setColors}
         />
       )}
     </div>

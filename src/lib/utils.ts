@@ -24,3 +24,80 @@ export function downloadFile({ data, fileName, fileType }: downloadFileProps) {
   a.dispatchEvent(clickEvt);
   a.remove();
 }
+
+export function hexStringToRGB(color: string) {
+  return {
+    r: parseInt(color.substring(1, 3), 16),
+    g: parseInt(color.substring(3, 5), 16),
+    b: parseInt(color.substring(5, 7), 16),
+  };
+}
+
+export function RGBToHexString({
+  r,
+  g,
+  b,
+}: {
+  r: number;
+  g: number;
+  b: number;
+}) {
+  const rHex = `00${Math.round(r).toString(16)}`;
+  const gHex = `00${Math.round(g).toString(16)}`;
+  const bHex = `00${Math.round(b).toString(16)}`;
+
+  return `#${rHex.substring(rHex.length - 2)}${gHex.substring(
+    gHex.length - 2
+  )}${bHex.substring(bHex.length - 2)}`;
+}
+
+export function RGBToHSL({ r, g, b }: { r: number; g: number; b: number }) {
+  (r /= 255), (g /= 255), (b /= 255);
+  const vmax = Math.max(r, g, b),
+    vmin = Math.min(r, g, b);
+  let h = 0,
+    s,
+    l = (vmax + vmin) / 2;
+
+  if (vmax === vmin) {
+    return { h: 0, s: 0, l }; // achromatic
+  }
+
+  const d = vmax - vmin;
+  s = l > 0.5 ? d / (2 - vmax - vmin) : d / (vmax + vmin);
+  if (vmax === r) h = (g - b) / d + (g < b ? 6 : 0);
+  if (vmax === g) h = (b - r) / d + 2;
+  if (vmax === b) h = (r - g) / d + 4;
+  h /= 6;
+
+  return { h, s, l };
+}
+
+function hueToRgb(p: number, q: number, t: number) {
+  if (t < 0) t += 1;
+  if (t > 1) t -= 1;
+  if (t < 1 / 6) return p + (q - p) * 6 * t;
+  if (t < 1 / 2) return q;
+  if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+  return p;
+}
+
+export function HSLToRGB({ h, s, l }: { h: number; s: number; l: number }) {
+  let r, g, b;
+
+  if (s === 0) {
+    r = g = b = l; // achromatic
+  } else {
+    const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+    const p = 2 * l - q;
+    r = hueToRgb(p, q, h + 1 / 3);
+    g = hueToRgb(p, q, h);
+    b = hueToRgb(p, q, h - 1 / 3);
+  }
+
+  return {
+    r: Math.round(r * 255),
+    g: Math.round(g * 255),
+    b: Math.round(b * 255),
+  };
+}

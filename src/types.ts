@@ -8,6 +8,7 @@ export type category = {
     | "stringCategory"
     | "multipleStringCategory";
   valueRange: any[];
+  colors?: { [key: string]: string } | undefined;
 };
 export type song = {
   id: string;
