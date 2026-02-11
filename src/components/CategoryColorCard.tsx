@@ -23,6 +23,28 @@ export type CategoryColorCardProps = {
   onClose: () => void;
 };
 
+export function getNumberCategoryGradient(
+  category: category,
+  colors?: { [key: string]: string } | undefined,
+  direction: string = "to bottom"
+) {
+  const min = Math.min(...category.valueRange);
+  const max = Math.max(...category.valueRange);
+  let gradient = `linear-gradient(${direction}`;
+
+  if (colors === undefined) {
+    colors = category.colors!;
+  }
+
+  category.valueRange.sort().forEach((v) => {
+    const factor = (v - min) / (max - min);
+
+    gradient += `, ${colors[v.toString()]} ${Math.round(factor * 100)}%`;
+  });
+
+  return gradient + ")";
+}
+
 export default function CategoryColorCard({
   category,
   onFinish,
@@ -99,22 +121,6 @@ export default function CategoryColorCard({
       setColors(newColors);
     };
 
-    const getGradient = () => {
-      let gradient = "linear-gradient(to bottom";
-
-      category.valueRange.forEach((v) => {
-        const factor = (v - min) / (max - min);
-
-        gradient += `, ${colors[v.toString()]} ${Math.round(factor * 100)}%`;
-      });
-
-      return gradient + ")";
-
-      // return `linear-gradient(to bottom, ${colors[min.toString()]} 0%, ${
-      //   colors[max.toString()]
-      // } 100%)`;
-    };
-
     return (
       <>
         <div className="flex flex-row justify-between" key="min">
@@ -129,7 +135,10 @@ export default function CategoryColorCard({
           />
         </div>
         <div className="flex flex-row justify-end" key="gradient-container">
-          <div className="w-20 h-100" style={{ background: getGradient() }} />
+          <div
+            className="w-20 h-100"
+            style={{ background: getNumberCategoryGradient(category, colors) }}
+          />
         </div>
         <div className="flex flex-row justify-between" key="max">
           Max ({max})

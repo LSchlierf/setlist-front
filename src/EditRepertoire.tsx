@@ -53,7 +53,9 @@ import {
 import NewSongCard from "./components/NewSongCard";
 import DurationInput from "./components/DurationInput";
 import NewCategoryCard from "./components/NewCategoryCard";
-import CategoryColorCard from "./components/CategoryColorCard";
+import CategoryColorCard, {
+  getNumberCategoryGradient,
+} from "./components/CategoryColorCard";
 import {
   Tooltip,
   TooltipContent,
@@ -87,7 +89,7 @@ export default function EditRepertoire() {
   };
 
   const refetchUserData = () => {
-    storage.getSongs().then(setSongs);
+    storage.getSongs().then((songs) => setSongs(byTitle(true)(songs)));
     storage.getCategories().then(setCategories);
   };
 
@@ -440,7 +442,10 @@ export default function EditRepertoire() {
           changeSimpleSongProperty(
             song.id,
             category.id,
-            Number(e.target.value)
+            Math.max(
+              Math.min(...category.valueRange),
+              Math.min(Math.max(...category.valueRange), Number(e.target.value))
+            )
           );
         }}
       />
@@ -554,6 +559,48 @@ export default function EditRepertoire() {
     return undefined;
   };
 
+  const getStringCategoryGradient = (category: category) => {
+    let gradient = "conic-gradient(from 0.75turn";
+
+    category.valueRange.forEach((val, index) => {
+      const ratio = index / category.valueRange.length;
+      const nextRatio = (index + 1) / category.valueRange.length;
+
+      gradient += `, ${category.colors![val.toString()]} ${Math.round(
+        ratio * 100
+      )}%, ${category.colors![val.toString()]} ${Math.round(nextRatio * 100)}%`;
+    });
+
+    return gradient + ")";
+  };
+
+  const ColorsGradient = (category: category) => {
+    let gradient = "";
+
+    switch (category.type) {
+      case "booleanCategory":
+        gradient = `linear-gradient(to right, ${category.colors!["true"]} 0%, ${
+          category.colors!["true"]
+        } 50%, ${category.colors!["false"]} 50%, ${
+          category.colors!["false"]
+        } 100%)`;
+        break;
+      case "numberCategory":
+        gradient = getNumberCategoryGradient(category, undefined, "to right");
+        break;
+      case "stringCategory":
+        gradient = getStringCategoryGradient(category);
+        break;
+    }
+
+    return (
+      <Button
+        className="hover:cursor-default!"
+        style={{ background: gradient }}
+      ></Button>
+    );
+  };
+
   const SongRow = (song: song) => {
     const { id, title, artist, length, notes } = song;
     const editing = editingSong === id;
@@ -599,6 +646,14 @@ export default function EditRepertoire() {
             ) : (
               <Button
                 onClick={() => {
+                  if (editingSong !== undefined) {
+                    setSongs((songs) =>
+                      songs?.map((song) => {
+                        if (song.id !== editingSong) return song;
+                        return editedSongBefore!;
+                      })
+                    );
+                  }
                   setEditedSongBefore(song);
                   setEditingSong(id);
                 }}
@@ -648,6 +703,7 @@ export default function EditRepertoire() {
             <div className="flex flex-row justify-between items-center">
               Colors:
               <ButtonGroup>
+                {!!colors && ColorsGradient(category)}
                 {type === "multipleStringCategory" ? (
                   <Tooltip>
                     <TooltipTrigger
@@ -806,7 +862,7 @@ export default function EditRepertoire() {
         {songs?.length} Songs, {totalLength()} total.
         <div className="flex flex-col gap-6">
           <div className="font-bold text-2xl">Your Custom Categories:</div>
-          <div className="grid gap-6 grid-cols-7">
+          <div className="grid gap-6 grid-cols-6">
             {categories?.map(CategoryCard)}
             <AddCategoryCard />
           </div>
