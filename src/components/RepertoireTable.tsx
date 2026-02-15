@@ -44,9 +44,17 @@ import NewSongCard from "./NewSongCard";
 
 export type RepertoireTableProps = {
   categories: category[];
+  readonly?: boolean | undefined;
+  filterTerm?: string | undefined;
+  usedSongs?: Set<string> | undefined;
 };
 
-export default function RepertoireTable({ categories }: RepertoireTableProps) {
+export default function RepertoireTable({
+  categories,
+  readonly = false,
+  filterTerm,
+  usedSongs = new Set(),
+}: RepertoireTableProps) {
   const [songs, setSongs] = useState<undefined | song[]>(undefined);
   const [editingSong, setEditingSong] = useState<string | undefined>(undefined);
   const [sorting, setSorting] = useState<
@@ -113,6 +121,20 @@ export default function RepertoireTable({ categories }: RepertoireTableProps) {
     (categoryId: string, categoryType: string) => (asc: boolean) => {
       setSongs(byCategory(asc, categoryId, categoryType));
     };
+
+  const filterByTerm = (song: song) => {
+    if (filterTerm === undefined || filterTerm.length === 0) return true;
+
+    return (
+      song.title.toLowerCase().includes(filterTerm.toLowerCase()) ||
+      song.artist.toLowerCase().includes(filterTerm.toLowerCase()) ||
+      song.notes?.toLowerCase().includes(filterTerm.toLowerCase())
+    );
+  };
+
+  const filterByExclusion = (song: song) => {
+    return !usedSongs.has(song.id);
+  };
 
   useEffect(() => {
     storage.init().then(() => {
@@ -277,6 +299,12 @@ export default function RepertoireTable({ categories }: RepertoireTableProps) {
   };
 
   const getTableCellStyle = (category: category, song: song) => {
+    if (!!category.colors && category.type === "booleanCategory") {
+      return {
+        backgroundColor:
+          category.colors[(!!song.properties[category.id]).toString()],
+      };
+    }
     if (!!category.colors && song.properties[category.id] !== undefined) {
       return {
         backgroundColor:
@@ -312,7 +340,7 @@ export default function RepertoireTable({ categories }: RepertoireTableProps) {
     song: song
   ) => {
     if (!editing) {
-      if (song.properties[category.id] === undefined) return <></>;
+      // if (song.properties[category.id] === undefined) return <></>;
 
       return !!song.properties[category.id] ? <Check /> : <X />;
     }
@@ -478,47 +506,49 @@ export default function RepertoireTable({ categories }: RepertoireTableProps) {
         <TableCell>
           {StringInput({ editing, value: notes, onChange: editNotes(id) })}
         </TableCell>
-        <TableCell className="w-fit">
-          <ButtonGroup>
-            {editingSong === id ? (
+        {!readonly && (
+          <TableCell className="w-fit">
+            <ButtonGroup>
+              {editingSong === id ? (
+                <Button
+                  onClick={() => {
+                    finishEditingSong(song);
+                  }}
+                  className="border"
+                >
+                  <Check /> Done
+                </Button>
+              ) : (
+                <Button
+                  onClick={() => {
+                    if (editingSong !== undefined) {
+                      setSongs((songs) =>
+                        songs?.map((song) => {
+                          if (song.id !== editingSong) return song;
+                          return editedSongBefore!;
+                        })
+                      );
+                    }
+                    setEditedSongBefore(song);
+                    setEditingSong(id);
+                  }}
+                  className="border"
+                  variant={"secondary"}
+                >
+                  <Pen /> Edit
+                </Button>
+              )}
               <Button
-                onClick={() => {
-                  finishEditingSong(song);
-                }}
-                className="border"
-              >
-                <Check /> Done
-              </Button>
-            ) : (
-              <Button
-                onClick={() => {
-                  if (editingSong !== undefined) {
-                    setSongs((songs) =>
-                      songs?.map((song) => {
-                        if (song.id !== editingSong) return song;
-                        return editedSongBefore!;
-                      })
-                    );
-                  }
-                  setEditedSongBefore(song);
-                  setEditingSong(id);
-                }}
-                className="border"
+                className="hover:bg-red-600/80 border"
                 variant={"secondary"}
+                onClick={deleteSong(id)}
               >
-                <Pen /> Edit
+                <Trash2 />
+                Delete
               </Button>
-            )}
-            <Button
-              className="hover:bg-red-600/80 border"
-              variant={"secondary"}
-              onClick={deleteSong(id)}
-            >
-              <Trash2 />
-              Delete
-            </Button>
-          </ButtonGroup>
-        </TableCell>
+            </ButtonGroup>
+          </TableCell>
+        )}
       </TableRow>
     );
   };
@@ -563,31 +593,33 @@ export default function RepertoireTable({ categories }: RepertoireTableProps) {
                 />
               ))}
             <TableHead>Notes</TableHead>
-            <TableHead>Actions</TableHead>
+            {!readonly && <TableHead>Actions</TableHead>}
           </TableRow>
         </TableHeader>
         <TableBody>
-          {songs?.map(SongRow)}
-          <TableRow>
-            <TableCell>
-              <Button
-                onClick={() => setNewSongDialogOpen(true)}
-                className="border"
-              >
-                <Plus />
-                Add Song
-              </Button>
-            </TableCell>
-            <TableCell />
-            <TableCell />
-            {categories
-              ?.filter(({ show }) => show)
-              .map(({ id }) => (
-                <TableCell key={id} />
-              ))}
-            <TableCell />
-            <TableCell />
-          </TableRow>
+          {songs?.filter(filterByExclusion).filter(filterByTerm).map(SongRow)}
+          {!readonly && (
+            <TableRow>
+              <TableCell>
+                <Button
+                  onClick={() => setNewSongDialogOpen(true)}
+                  className="border"
+                >
+                  <Plus />
+                  Add Song
+                </Button>
+              </TableCell>
+              <TableCell />
+              <TableCell />
+              {categories
+                ?.filter(({ show }) => show)
+                .map(({ id }) => (
+                  <TableCell key={id} />
+                ))}
+              <TableCell />
+              <TableCell />
+            </TableRow>
+          )}
         </TableBody>
       </Table>
       {songs?.length} Songs, {totalLength()} total.

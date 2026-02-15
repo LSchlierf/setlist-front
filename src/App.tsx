@@ -6,6 +6,7 @@ import PseudoSetlistCard from "./components/PseudoSetlistCard";
 import { Button } from "./components/ui/button";
 import { ArrowRight, Music, Plus } from "lucide-react";
 import { Link } from "react-router";
+import SetlistIngestCard from "./components/SetlistIngestCard";
 
 function App() {
   const [setlists, setSetlists] = useState<
@@ -15,6 +16,8 @@ function App() {
   const [repertoireSize, setRepertoireSize] = useState<number | undefined>(
     undefined
   );
+  const [ingestSetlistCardOpen, setIngestSetlistCardOpen] =
+    useState<boolean>(false);
 
   const refetchUserData = () => {
     if (!loggedIn) return;
@@ -71,7 +74,7 @@ function App() {
                   <>Your Setlists</>
                 )}
               </h2>
-              <Button>
+              <Button onClick={() => setIngestSetlistCardOpen(true)}>
                 <Plus /> Import setlist from <code>.json</code>
               </Button>
             </span>
@@ -95,6 +98,12 @@ function App() {
               />
             </div>
           </div>
+          {ingestSetlistCardOpen && (
+            <SetlistIngestCard
+              onClose={() => setIngestSetlistCardOpen(false)}
+              onSetlistsUpdate={refetchUserData}
+            />
+          )}
         </div>
       ) : (
         <>Log tf in</>

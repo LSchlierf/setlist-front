@@ -19,6 +19,22 @@ export type song = {
   properties: { [key: string]: any };
 };
 
+export type setlist = {
+  name: string;
+  id: string;
+  breakLen: number;
+  breakBuffer: number;
+  fixedTime: "START" | "END";
+  startTime: string;
+  setSpots: setSpot[];
+};
+
+export type setSpot = {
+  set: number;
+  spotPrio: number;
+  songId: string;
+};
+
 export type InputProps<T> = {
   editing: boolean;
   value: T;

@@ -8,10 +8,7 @@ export type HeaderProps = {
   onLogin: (loggedIn: boolean) => void;
 };
 
-export default function Header({
-  backButton,
-  onLogin,
-}: HeaderProps) {
+export default function Header({ backButton, onLogin }: HeaderProps) {
   const [loginOpen, setLoginOpen] = useState(false);
 
   return (
@@ -35,10 +32,7 @@ export default function Header({
         </div>
       </header>
       {loginOpen && (
-        <LoginCard
-          onLogin={onLogin}
-          onClose={() => setLoginOpen(false)}
-        />
+        <LoginCard onLogin={onLogin} onClose={() => setLoginOpen(false)} />
       )}
     </>
   );

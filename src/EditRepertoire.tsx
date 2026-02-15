@@ -1,11 +1,6 @@
 import { Link, useNavigate } from "react-router";
 import Header from "./components/Header";
-import {
-  ArrowLeft,
-  Palette,
-  Plus,
-  Trash2,
-} from "lucide-react";
+import { ArrowLeft, Palette, Plus, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import storage from "./lib/storage";
 import { Button } from "./components/ui/button";
@@ -13,10 +8,7 @@ import { ButtonGroup } from "./components/ui/button-group";
 import { Checkbox } from "./components/ui/checkbox";
 import RepertoireImportExportCard from "./components/RepertoireImportExportCard";
 import { Card, CardContent } from "./components/ui/card";
-import {
-  categoryTypeLabels,
-  type category,
-} from "./types";
+import { categoryTypeLabels, type category } from "./types";
 import NewCategoryCard from "./components/NewCategoryCard";
 import CategoryColorCard, {
   getNumberCategoryGradient,
@@ -300,8 +292,6 @@ export default function EditRepertoire() {
         <Button onClick={() => setDialogOpen(true)} className="w-60">
           Import / Export Repertoire
         </Button>
-        {/* {JSON.stringify(songs, undefined, 2)} */}
-        {/* {JSON.stringify(categories, undefined, 2)} */}
         <div />
       </div>
       {dialogOpen && (

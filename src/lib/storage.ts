@@ -88,9 +88,32 @@ class storage {
       .catch(() => undefined);
   }
 
+  static async ingestSetlist(setlist: string) {
+    await fetch("/api/user/setlist/ingest", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${this._token}`,
+      },
+      body: setlist,
+    }).then();
+  }
+
   static async addSetlist() {
     return await fetch("/api/user/setlist/create", {
       method: "POST",
+      headers: {
+        Accept: "application/json",
+        Authorization: `Bearer ${this._token}`,
+      },
+    })
+      .then((response) => response.json())
+      .catch(() => undefined);
+  }
+
+  static async getSetlist(id: string) {
+    return await fetch(`/api/user/setlist/${id}`, {
+      method: "GET",
       headers: {
         Accept: "application/json",
         Authorization: `Bearer ${this._token}`,
