@@ -33,7 +33,7 @@ function App() {
         setLoggedIn(true);
       }
     });
-    document.title = "Setlist Tool";
+    document.title = "SongRack";
   }, []);
 
   const makeUsernameUppercase = (username: string) => {
@@ -81,6 +81,7 @@ function App() {
             <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
               {setlists?.map((p) => (
                 <SetlistCard
+                  key={p.id}
                   onDelete={() => {
                     storage.deleteSetlist(p.id).then(refetchUserData);
                   }}

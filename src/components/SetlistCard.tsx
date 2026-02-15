@@ -1,12 +1,6 @@
-import { Trash2 } from "lucide-react";
+import { ArrowRight, Trash2 } from "lucide-react";
 import { Button } from "./ui/button";
-import {
-  Card,
-  CardAction,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "./ui/card";
+import { Card, CardAction, CardFooter, CardHeader, CardTitle } from "./ui/card";
 import { Link } from "react-router";
 
 export type SetlistCardProps = {
@@ -23,7 +17,7 @@ export default function SetlistCard({
   sets,
 }: SetlistCardProps) {
   return (
-    <Card key={id} className="flex flex-col justify-between">
+    <Card className="flex flex-col justify-between">
       <CardHeader className="text-2xl">
         <CardTitle>{name}</CardTitle>
         <CardAction>
@@ -39,7 +33,9 @@ export default function SetlistCard({
       <CardFooter className="flex flex-col items-start gap-4">
         {sets} sets
         <Link className="w-full" to={`/editSetlist/${id}`}>
-          <Button className="w-full">Edit Setlist</Button>
+          <Button className="w-full">
+            Edit Setlist <ArrowRight />
+          </Button>
         </Link>
       </CardFooter>
     </Card>

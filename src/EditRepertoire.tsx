@@ -102,7 +102,7 @@ export default function EditRepertoire() {
       storage.socket?.on("repertoire:deleteColors", handleColorDelete);
     });
 
-    document.title = "Repertoire";
+    document.title = "Repertoire - SongRack";
 
     return () => {
       storage.socket?.off("repertoire:deleteColors", handleColorDelete);

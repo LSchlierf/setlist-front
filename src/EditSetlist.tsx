@@ -87,7 +87,7 @@ export default function EditSetlist() {
 
   useEffect(() => {
     if (setlist) {
-      document.title = "Setlist " + setlist.name;
+      document.title = setlist.name + " - SongRack";
     }
   }, [setlist]);
 
@@ -189,20 +189,20 @@ export default function EditSetlist() {
           color = category.colors?.["false"];
         }
         return (
-          <TableCell style={{ backgroundColor: color }}>
+          <TableCell key={category.id} style={{ backgroundColor: color }}>
             {song.properties[category.id] ? <Check /> : <X />}
           </TableCell>
         );
       case "numberCategory":
       case "stringCategory":
         return (
-          <TableCell style={{ backgroundColor: color }}>
+          <TableCell key={category.id} style={{ backgroundColor: color }}>
             {song.properties[category.id]}
           </TableCell>
         );
       case "multipleStringCategory":
         return (
-          <TableCell style={{ backgroundColor: color }}>
+          <TableCell key={category.id} style={{ backgroundColor: color }}>
             {song.properties[category.id]?.join(", ")}
           </TableCell>
         );
@@ -344,7 +344,7 @@ export default function EditSetlist() {
               <Input
                 className="w-50 col-span-3"
                 type="time"
-                value={setlist?.startTime}
+                value={setlist?.startTime || "19:00"}
               />
               <span className="w-fit flex flex-row items-center">End:</span>
               <Input className="w-50 col-span-3" type="time" value={endTime} />
@@ -354,7 +354,7 @@ export default function EditSetlist() {
               <Input
                 className="w-50 col-span-3"
                 type="number"
-                value={setlist?.breakLen}
+                value={setlist?.breakLen || 0}
               />
               <span className="w-fit flex flex-row items-center">
                 Break buffer:
@@ -362,7 +362,7 @@ export default function EditSetlist() {
               <Input
                 className="w-50 col-span-3"
                 type="number"
-                value={setlist?.breakBuffer}
+                value={setlist?.breakBuffer || 0}
               />
             </div>
             <span>
