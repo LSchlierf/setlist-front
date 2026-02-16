@@ -1,4 +1,4 @@
-import { ArrowRight, Trash2 } from "lucide-react";
+import { ArrowRight, Music, Trash2 } from "lucide-react";
 import { Button } from "./ui/button";
 import { Card, CardAction, CardFooter, CardHeader, CardTitle } from "./ui/card";
 import { Link } from "react-router";

@@ -25,7 +25,7 @@ export type setlist = {
   breakLen: number;
   breakBuffer: number;
   fixedTime: "START" | "END";
-  startTime: string;
+  time: string;
   setSpots: setSpot[];
 };
 

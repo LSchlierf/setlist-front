@@ -4,7 +4,7 @@ import storage from "./lib/storage";
 import SetlistCard, { type SetlistCardProps } from "./components/SetlistCard";
 import PseudoSetlistCard from "./components/PseudoSetlistCard";
 import { Button } from "./components/ui/button";
-import { ArrowRight, Music, Plus } from "lucide-react";
+import { ArrowRight, FileUp, Music } from "lucide-react";
 import { Link } from "react-router";
 import SetlistIngestCard from "./components/SetlistIngestCard";
 
@@ -75,7 +75,7 @@ function App() {
                 )}
               </h2>
               <Button onClick={() => setIngestSetlistCardOpen(true)}>
-                <Plus /> Import setlist from <code>.json</code>
+                <FileUp /> Import setlist from <code>.json</code>
               </Button>
             </span>
             <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">

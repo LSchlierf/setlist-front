@@ -1,6 +1,6 @@
 import { Link, useNavigate } from "react-router";
 import Header from "./components/Header";
-import { ArrowLeft, Palette, Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, FolderInput, Palette, Plus, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import storage from "./lib/storage";
 import { Button } from "./components/ui/button";
@@ -219,7 +219,7 @@ export default function EditRepertoire() {
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>
-                      Colors aren't supported for this cateogry type.
+                      Colors currently aren't supported for this cateogry type.
                     </TooltipContent>
                   </Tooltip>
                 ) : (
@@ -284,13 +284,13 @@ export default function EditRepertoire() {
         <RepertoireTable categories={categories || []} />
         <div className="flex flex-col gap-6">
           <div className="font-bold text-2xl">Your Custom Categories:</div>
-          <div className="grid gap-6 grid-cols-6">
+          <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
             {categories?.map(CategoryCard)}
             <AddCategoryCard />
           </div>
         </div>
         <Button onClick={() => setDialogOpen(true)} className="w-60">
-          Import / Export Repertoire
+          <FolderInput /> Import / Export Repertoire
         </Button>
         <div />
       </div>

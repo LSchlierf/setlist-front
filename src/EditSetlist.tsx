@@ -1,6 +1,14 @@
 import { Link, useNavigate, useParams } from "react-router";
 import Header from "./components/Header";
-import { ArrowLeft, Check, Pen, Trash2, X } from "lucide-react";
+import {
+  ArrowLeft,
+  Check,
+  FileDown,
+  Import,
+  Pen,
+  Trash2,
+  X,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 import storage from "./lib/storage";
 import { type category, type setlist, type setSpot, type song } from "./types";
@@ -43,8 +51,12 @@ export default function EditSetlist() {
   const [songs, setSongs] = useState<Map<string, song> | undefined>(undefined);
   const [filter, setFilter] = useState<string>("");
   const [editingName, setEditingName] = useState<boolean>(false);
+  const [editingTimes, setEditingTimes] = useState<boolean>(false);
   const [name, setName] = useState<string>("");
-  const [endTime, setEndTime] = useState("");
+  const [startTime, setStartTime] = useState<string>("19:00");
+  const [endTime, setEndTime] = useState<string>("19:00");
+  const [breakLen, setBreakLen] = useState<number>(20);
+  const [breakBuf, setBreakBuf] = useState<number>(5);
 
   const backToMainPage = () => {
     navigate("/");
@@ -68,13 +80,22 @@ export default function EditSetlist() {
         backToMainPage();
         return;
       }
-      storage.getSetlist(id).then((s) => {
-        setSetlist(s);
-        setEndTime(calculateEndTime(s));
-      });
       storage.getCategories().then(setCategories);
       storage.getSongs().then((songs: song[]) => {
-        setSongs(new Map(songs.map((song) => [song.id, song])));
+        const songMap = new Map(songs.map((song) => [song.id, song]));
+        setSongs(songMap);
+        storage.getSetlist(id).then((s: setlist) => {
+          setSetlist(s);
+          setBreakLen(s.breakLen);
+          setBreakBuf(s.breakBuffer);
+          if (s.fixedTime === "START") {
+            setEndTime(calculateEndTime(s, songMap));
+            setStartTime(s.time);
+          } else {
+            setStartTime(calculateStartTime(s, songMap));
+            setEndTime(s.time);
+          }
+        });
       });
 
       storage.socket?.on("setlist:updateName", handleNameUpdate);
@@ -98,14 +119,17 @@ export default function EditSetlist() {
     setEditingName(false);
   };
 
-  const concertDurationMinutes = (setlist: setlist) => {
+  const concertDurationMinutes = (
+    setlist: setlist,
+    songMap: Map<string, song>
+  ) => {
     const sets = getPartitionedSets(setlist);
     const breaks =
       sets.length * setlist.breakBuffer + (sets.length - 1) * setlist.breakLen;
     const setLengths = [...sets, getEncore(setlist)].map(
       (set) =>
         Math.ceil(
-          set.reduce((a, s) => a + (songs?.get(s.songId)?.length || 0), 0) /
+          set.reduce((a, s) => a + (songMap.get(s.songId)?.length || 0), 0) /
             60 /
             5
         ) * 5
@@ -114,15 +138,35 @@ export default function EditSetlist() {
     return Math.ceil(sum / 60);
   };
 
-  const calculateEndTime = (setlist: setlist) => {
-    const startH = Number(setlist.startTime.split(":")[0]);
-    const startM = Number(setlist.startTime.split(":")[1]);
-    const minutes = concertDurationMinutes(setlist);
+  const concertLengthApprox = (
+    setlist: setlist,
+    songMap: Map<string, song>
+  ) => {
+    const sum = concertDurationMinutes(setlist, songMap);
+    return `~${Math.floor(sum / 60) % 60}h ${sum % 60}m`;
+  };
+
+  const calculateEndTime = (setlist: setlist, songMap: Map<string, song>) => {
+    const startH = Number(setlist.time.split(":")[0]);
+    const startM = Number(setlist.time.split(":")[1]);
+    const minutes = concertDurationMinutes(setlist, songMap);
     const endMinutes = (startH * 60 + startM + minutes) % 1440;
     return (
       ("0" + Math.floor(endMinutes / 60)).slice(-2) +
       ":" +
       ("0" + (endMinutes % 60)).slice(-2)
+    );
+  };
+
+  const calculateStartTime = (setlist: setlist, songMap: Map<string, song>) => {
+    const endH = Number(setlist.time.split(":")[0]);
+    const endM = Number(setlist.time.split(":")[1]);
+    const minutes = concertDurationMinutes(setlist, songMap);
+    const startMinutes = (endH * 60 + endM - minutes + 1440) % 1440;
+    return (
+      ("0" + Math.floor(startMinutes / 60)).slice(-2) +
+      ":" +
+      ("0" + (startMinutes % 60)).slice(-2)
     );
   };
 
@@ -254,7 +298,7 @@ export default function EditSetlist() {
     </Table>
   );
 
-  function setLength(set: setSpot[]) {
+  const setLength = (set: setSpot[]) => {
     const sum = set.reduce(
       (a: number, s) => a + (songs?.get(s?.songId)?.length || 0),
       0
@@ -262,15 +306,15 @@ export default function EditSetlist() {
     return `${Math.floor(sum / 3600)}h ${Math.floor(sum / 60) % 60}m ${
       sum % 60
     }s`;
-  }
+  };
 
-  function setLengthApprox(set: setSpot[]) {
+  const setLengthApprox = (set: setSpot[]) => {
     const sum = set.reduce(
       (a: number, s) => a + (songs?.get(s?.songId)?.length || 0),
       0
     );
     return Math.ceil(sum / 60 / 5) * 5;
-  }
+  };
 
   const setDisplay = (setSpots: setSpot[], index: number | string) => (
     <Card key={`set-${index}`} className="w-full">
@@ -292,6 +336,20 @@ export default function EditSetlist() {
         {setSpots.length} Songs, ~{setLengthApprox(setSpots)} min (
         {setLength(setSpots)})
       </CardFooter>
+    </Card>
+  );
+
+  const PseudoSetDisplay = () => (
+    <Card className="relative w-full border-dashed h-60">
+      <CardHeader className="absolute w-full">
+        <CardTitle className="realtive font-bold text-2xl">New Set</CardTitle>
+      </CardHeader>
+      <CardContent className="flex flex-col w-full h-full items-center justify-center">
+        <div className="flex flex-col gap-2 items-center">
+          <Import />
+          Drag a song here to add a new set
+        </div>
+      </CardContent>
     </Card>
   );
 
@@ -328,6 +386,7 @@ export default function EditSetlist() {
                     setEditingName(true);
                   }}
                   variant={"secondary"}
+                  className="border"
                 >
                   <Pen />
                 </Button>
@@ -335,26 +394,83 @@ export default function EditSetlist() {
             )}
           </h1>
           {setlist && getPartitionedSets(setlist).map(setDisplay)}
+          <PseudoSetDisplay />
           {setlist && setDisplay(getEncore(setlist), "Encore")}
           {setlist?.setSpots.length || 0} Songs total
-          <h1 className="font-bold text-2xl">Times:</h1>
+          <h1 className="font-bold text-2xl flex flex-row items-center gap-2">
+            Times:
+            {editingTimes ? (
+              <ButtonGroup>
+                <Button
+                  className="border"
+                  variant={"secondary"}
+                  onClick={() => {
+                    setEditingTimes(false);
+                  }}
+                >
+                  <X />
+                </Button>
+                <Button
+                  className="border"
+                  onClick={() => {
+                    setEditingTimes(false);
+                  }}
+                >
+                  <Check />
+                </Button>
+              </ButtonGroup>
+            ) : (
+              <Button
+                onClick={() => setEditingTimes(true)}
+                className="border"
+                variant={"secondary"}
+              >
+                <Pen />
+              </Button>
+            )}
+          </h1>
           <div className="flex flex-col gap-4">
+            <div className="grid grid-cols-2 w-fit gap-2">
+              <div>Raw playing time:</div>
+              <div>
+                {setlist?.setSpots ? (
+                  <b>{setLength(setlist?.setSpots)}</b>
+                ) : (
+                  "0s"
+                )}
+              </div>
+              <div>Total length:</div>
+              <div>
+                {setlist?.setSpots && songs ? (
+                  <b>{concertLengthApprox(setlist, songs)}</b>
+                ) : (
+                  "0m"
+                )}
+              </div>
+            </div>
             <div className="grid grid-cols-4 w-fit gap-2">
               <span className="w-fit flex flex-row items-center">Start:</span>
               <Input
                 className="w-50 col-span-3"
                 type="time"
-                value={setlist?.startTime || "19:00"}
+                value={startTime}
+                disabled={!editingTimes}
               />
               <span className="w-fit flex flex-row items-center">End:</span>
-              <Input className="w-50 col-span-3" type="time" value={endTime} />
+              <Input
+                className="w-50 col-span-3"
+                type="time"
+                value={endTime}
+                disabled={!editingTimes}
+              />
               <span className="w-fit flex flex-row items-center">
                 Break length:
               </span>
               <Input
                 className="w-50 col-span-3"
                 type="number"
-                value={setlist?.breakLen || 0}
+                value={breakLen}
+                disabled={!editingTimes}
               />
               <span className="w-fit flex flex-row items-center">
                 Break buffer:
@@ -362,17 +478,22 @@ export default function EditSetlist() {
               <Input
                 className="w-50 col-span-3"
                 type="number"
-                value={setlist?.breakBuffer || 0}
+                value={breakBuf}
+                disabled={!editingTimes}
               />
             </div>
             <span>
-              Breaks after each set (except last), with a buffer for each set
+              Breaks after each set (except last), with a buffer for each set.
+              All numbers are minutes.
             </span>
           </div>
           <h1 className="font-bold text-2xl">Your Custom Categories:</h1>
           <div className="grid grid-cols-6 gap-4">
             {categories?.map(categoryCard)}
           </div>
+          <Button className="w-fit">
+            <FileDown /> Export Setlist
+          </Button>
         </div>
       </div>
     </ResizablePanel>
