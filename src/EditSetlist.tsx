@@ -39,6 +39,7 @@ import {
 } from "./components/ui/table";
 import DurationInput from "./components/DurationInput";
 import { Checkbox } from "./components/ui/checkbox";
+import SetlistExportCard from "./components/SetlistExportCard";
 
 export default function EditSetlist() {
   const { id } = useParams();
@@ -57,6 +58,7 @@ export default function EditSetlist() {
   const [endTime, setEndTime] = useState<string>("19:00");
   const [breakLen, setBreakLen] = useState<number>(20);
   const [breakBuf, setBreakBuf] = useState<number>(5);
+  const [exportDialogOpen, setExportDialogOpen] = useState<boolean>(false);
 
   const backToMainPage = () => {
     navigate("/");
@@ -491,7 +493,7 @@ export default function EditSetlist() {
           <div className="grid grid-cols-6 gap-4">
             {categories?.map(categoryCard)}
           </div>
-          <Button className="w-fit">
+          <Button onClick={() => setExportDialogOpen(true)} className="w-fit">
             <FileDown /> Export Setlist
           </Button>
         </div>
@@ -548,6 +550,12 @@ export default function EditSetlist() {
           {repertoireBank()}
         </ResizablePanelGroup>
       </div>
+      {exportDialogOpen && (
+        <SetlistExportCard
+          categories={categories || []}
+          onClose={() => setExportDialogOpen(false)}
+        />
+      )}
     </div>
   );
 }
