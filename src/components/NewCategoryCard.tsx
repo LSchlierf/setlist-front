@@ -136,7 +136,6 @@ export default function NewCategoryCard({
           className="w-full flex flex-row gap-2 justify-between"
           onSubmit={(e) => {
             e.preventDefault();
-            console.log("input");
           }}
         >
           <Input

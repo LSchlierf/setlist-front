@@ -137,35 +137,35 @@ export default function RepertoireTable({
   };
 
   useEffect(() => {
-    storage.init().then(() => {
+    storage.initRepertoire().then(() => {
       refetchUserData();
-      storage.socket?.on("repertoire", refetchUserData);
-      storage.socket?.on("repertoire:addSong", handleSongCreate);
-      storage.socket?.on("repertoire:updateSong", handleSongUpdate);
-      storage.socket?.on("repertoire:deleteSong", handleSongDelete);
+      storage.repertoireSocket?.on("repertoire", refetchUserData);
+      storage.repertoireSocket?.on("repertoire:addSong", handleSongCreate);
+      storage.repertoireSocket?.on("repertoire:updateSong", handleSongUpdate);
+      storage.repertoireSocket?.on("repertoire:deleteSong", handleSongDelete);
     });
 
     return () => {
-      storage.socket?.off("repertoire:deleteSong", handleSongDelete);
-      storage.socket?.off("repertoire:updateSong", handleSongUpdate);
-      storage.socket?.off("repertoire:addSong", handleSongCreate);
-      storage.socket?.off("repertoire", refetchUserData);
+      storage.repertoireSocket?.off("repertoire:deleteSong", handleSongDelete);
+      storage.repertoireSocket?.off("repertoire:updateSong", handleSongUpdate);
+      storage.repertoireSocket?.off("repertoire:addSong", handleSongCreate);
+      storage.repertoireSocket?.off("repertoire", refetchUserData);
     };
   }, []);
 
   const addSong = (newSong: song) => {
-    storage.socket?.emit("repertoire:addSong", newSong);
+    storage.repertoireSocket?.emit("repertoire:addSong", newSong);
     handleSongCreate(newSong);
   };
 
   const finishEditingSong = (song: song) => {
-    storage.socket?.emit("repertoire:updateSong", song);
+    storage.repertoireSocket?.emit("repertoire:updateSong", song);
     setEditingSong(undefined);
     setEditedSongBefore(undefined);
   };
 
   const deleteSong = (songId: string) => () => {
-    storage.socket?.emit("repertoire:deleteSong", songId);
+    storage.repertoireSocket?.emit("repertoire:deleteSong", songId);
     setSongs((songs) => songs?.filter((s) => s.id !== songId));
   };
 

@@ -91,51 +91,78 @@ export default function EditRepertoire() {
   };
 
   useEffect(() => {
-    storage.init().then((v) => {
+    storage.initRepertoire().then((v) => {
       if (!v) backToMainPage();
       refetchUserData();
-      storage.socket?.on("repertoire", refetchUserData);
-      storage.socket?.on("repertoire:addCategory", handleCategoryCreate);
-      storage.socket?.on("repertoire:updateCategory", handleCategoryUpdate);
-      storage.socket?.on("repertoire:deleteCategory", handleCategoryDelete);
-      storage.socket?.on("repertoire:setColors", handleColorUpdate);
-      storage.socket?.on("repertoire:deleteColors", handleColorDelete);
+      storage.repertoireSocket?.on("repertoire", refetchUserData);
+      storage.repertoireSocket?.on(
+        "repertoire:addCategory",
+        handleCategoryCreate
+      );
+      storage.repertoireSocket?.on(
+        "repertoire:updateCategory",
+        handleCategoryUpdate
+      );
+      storage.repertoireSocket?.on(
+        "repertoire:deleteCategory",
+        handleCategoryDelete
+      );
+      storage.repertoireSocket?.on("repertoire:setColors", handleColorUpdate);
+      storage.repertoireSocket?.on(
+        "repertoire:deleteColors",
+        handleColorDelete
+      );
     });
 
     document.title = "Repertoire - SongRack";
 
     return () => {
-      storage.socket?.off("repertoire:deleteColors", handleColorDelete);
-      storage.socket?.off("repertoire:setColors", handleColorUpdate);
-      storage.socket?.off("repertoire:deleteCategory", handleCategoryDelete);
-      storage.socket?.off("repertoire:updateCategory", handleCategoryUpdate);
-      storage.socket?.off("repertoire:addCategory", handleCategoryCreate);
-      storage.socket?.off("repertoire", refetchUserData);
+      storage.repertoireSocket?.off(
+        "repertoire:deleteColors",
+        handleColorDelete
+      );
+      storage.repertoireSocket?.off("repertoire:setColors", handleColorUpdate);
+      storage.repertoireSocket?.off(
+        "repertoire:deleteCategory",
+        handleCategoryDelete
+      );
+      storage.repertoireSocket?.off(
+        "repertoire:updateCategory",
+        handleCategoryUpdate
+      );
+      storage.repertoireSocket?.off(
+        "repertoire:addCategory",
+        handleCategoryCreate
+      );
+      storage.repertoireSocket?.off("repertoire", refetchUserData);
     };
   }, []);
 
   const addCategory = (newCategory: category) => {
-    storage.socket?.emit("repertoire:addCategory", newCategory);
+    storage.repertoireSocket?.emit("repertoire:addCategory", newCategory);
     handleCategoryCreate(newCategory);
   };
 
   const editCategory = (category: category) => {
-    storage.socket?.emit("repertoire:updateCategory", category);
+    storage.repertoireSocket?.emit("repertoire:updateCategory", category);
     handleCategoryUpdate(category);
   };
 
   const deleteCategory = (categoryId: string) => {
-    storage.socket?.emit("repertoire:deleteCategory", categoryId);
+    storage.repertoireSocket?.emit("repertoire:deleteCategory", categoryId);
     handleCategoryDelete(categoryId);
   };
 
   const setColors = (categoryId: string, colors: { [key: string]: string }) => {
-    storage.socket?.emit("repertoire:setColors", { categoryId, colors });
+    storage.repertoireSocket?.emit("repertoire:setColors", {
+      categoryId,
+      colors,
+    });
     handleColorUpdate({ categoryId, colors });
   };
 
   const deleteColors = (categoryId: string) => {
-    storage.socket?.emit("repertoire:deleteColors", categoryId);
+    storage.repertoireSocket?.emit("repertoire:deleteColors", categoryId);
     handleColorDelete(categoryId);
   };
 
@@ -298,7 +325,7 @@ export default function EditRepertoire() {
         <RepertoireImportExportCard
           onRepertoireChange={() => {
             refetchUserData();
-            storage.socket?.emit("repertoire");
+            storage.repertoireSocket?.emit("repertoire");
           }}
           onClose={() => setDialogOpen(false)}
         />

@@ -2,6 +2,8 @@ import { io, Socket } from "socket.io-client";
 
 class storage {
   private static _socket: Socket | undefined = undefined;
+  private static _repertoireSocket: Socket | undefined = undefined;
+  private static _setlistSockets: Map<string, Socket> = new Map();
   private static _user: { id: string; name: string } | undefined = undefined;
   private static _token: string | undefined = undefined;
 
@@ -13,15 +15,57 @@ class storage {
     return this._socket;
   }
 
+  static get repertoireSocket() {
+    return this._repertoireSocket;
+  }
+
+  static getSetlistSocket(id: string) {
+    return this._setlistSockets?.get(id);
+  }
+
   static async init() {
     this._token = localStorage.getItem("AUTH_TOKEN") || undefined;
     this._user = await this.testToken();
     if (this._user && this._token && !this._socket) {
-      this._socket = io("/", {
+      this._socket = io({
         extraHeaders: {
           token: this._token,
         },
+        forceNew: true,
       });
+    }
+    return this.user;
+  }
+
+  static async initRepertoire() {
+    this._token = localStorage.getItem("AUTH_TOKEN") || undefined;
+    this._user = await this.testToken();
+    if (this._user && this._token && !this._repertoireSocket) {
+      this._repertoireSocket = io("/repertoire", {
+        extraHeaders: {
+          token: this._token,
+        },
+        forceNew: true,
+      });
+    }
+    return this.user;
+  }
+
+  static async initSetlist(setlistId: string) {
+    if (!setlistId) return;
+    this._token = localStorage.getItem("AUTH_TOKEN") || undefined;
+    this._user = await this.testToken();
+    if (this._user && this._token && !this._setlistSockets.has(setlistId)) {
+      this._setlistSockets.set(
+        setlistId,
+        io("/setlist", {
+          extraHeaders: {
+            token: this._token,
+            setlistId: setlistId,
+          },
+          forceNew: true,
+        })
+      );
     }
     return this.user;
   }
@@ -48,6 +92,10 @@ class storage {
     this._user = undefined;
     this._socket?.disconnect();
     this._socket = undefined;
+    this._repertoireSocket?.disconnect();
+    this._repertoireSocket = undefined;
+    this._setlistSockets.forEach((s) => s.disconnect());
+    this._setlistSockets.clear();
     this._token = undefined;
   }
 

@@ -77,7 +77,7 @@ export default function EditSetlist() {
       backToMainPage();
       return;
     }
-    storage.init().then((v) => {
+    storage.initSetlist(id).then((v) => {
       if (!v) {
         backToMainPage();
         return;
@@ -99,12 +99,11 @@ export default function EditSetlist() {
           }
         });
       });
-
-      storage.socket?.on("setlist:updateName", handleNameUpdate);
+      storage.getSetlistSocket(id)?.on("setlist:updateName", handleNameUpdate);
     });
 
     return () => {
-      storage.socket?.off("setlist:updateName", handleNameUpdate);
+      storage.getSetlistSocket(id)?.off("setlist:updateName", handleNameUpdate);
     };
   }, []);
 
@@ -115,7 +114,9 @@ export default function EditSetlist() {
   }, [setlist]);
 
   const finishEditingName = () => {
-    storage.socket?.emit("setlist:updateName", setlist!.id, name);
+    storage
+      .getSetlistSocket(id!)
+      ?.emit("setlist:updateName", setlist!.id, name);
     handleNameUpdate(setlist!.id, name);
     setName("");
     setEditingName(false);
