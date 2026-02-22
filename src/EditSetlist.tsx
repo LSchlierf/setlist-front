@@ -63,6 +63,9 @@ export default function EditSetlist() {
   const [draggingFrom, setDraggingFrom] = useState<string | undefined>(
     undefined
   );
+  const [newSetSongId, setNewSetSongId] = useState<string | undefined>(
+    undefined
+  );
 
   const backToMainPage = () => {
     navigate("/");
@@ -92,6 +95,25 @@ export default function EditSetlist() {
     setSetlist((setlist) => ({
       ...setlist!,
       setSpots: setlist!.setSpots.filter((s) => s.songId !== songId),
+    }));
+  };
+
+  const handleSetDelete = (setIndex: number) => {
+    setSetlist((setlist) => ({
+      ...setlist!,
+      setSpots: setlist!.setSpots
+        .filter((s) => s.set !== setIndex)
+        .map((s) => ({
+          ...s,
+          set: s.set > setIndex ? s.set - 1 : s.set,
+        })),
+    }));
+  };
+
+  const handleEncoreDelete = () => {
+    setSetlist((setlist) => ({
+      ...setlist!,
+      setSpots: setlist!.setSpots.filter((s) => s.set >= 0),
     }));
   };
 
@@ -126,9 +148,17 @@ export default function EditSetlist() {
       storage.getSetlistSocket(id)?.on("setlist:createSpot", handleSpotCreate);
       storage.getSetlistSocket(id)?.on("setlist:updateSpot", handleSpotUpdate);
       storage.getSetlistSocket(id)?.on("setlist:removeSpot", handleSpotRemove);
+      storage.getSetlistSocket(id)?.on("setlist:deleteSet", handleSetDelete);
+      storage
+        .getSetlistSocket(id)
+        ?.on("setlist:deleteEncore", handleEncoreDelete);
     });
 
     return () => {
+      storage
+        .getSetlistSocket(id)
+        ?.off("setlist:deleteEncore", handleEncoreDelete);
+      storage.getSetlistSocket(id)?.off("setlist:deleteSet", handleSetDelete);
       storage.getSetlistSocket(id)?.off("setlist:removeSpot", handleSpotRemove);
       storage.getSetlistSocket(id)?.off("setlist:updateSpot", handleSpotUpdate);
       storage.getSetlistSocket(id)?.off("setlist:createSpot", handleSpotCreate);
@@ -162,6 +192,16 @@ export default function EditSetlist() {
   const removeSpot = (songId: string) => {
     storage.getSetlistSocket(id!)?.emit("setlist:removeSpot", songId);
     handleSpotRemove(songId);
+  };
+
+  const deleteSet = (setIndex: number) => {
+    storage.getSetlistSocket(id!)?.emit("setlist:deleteSet", setIndex);
+    // handleSetDelete(setIndex); // gets double fired otherwise
+  };
+
+  const deleteEncore = () => {
+    storage.getSetlistSocket(id!)?.emit("setlist:deleteEncore");
+    handleEncoreDelete();
   };
 
   const startDragging =
@@ -276,6 +316,7 @@ export default function EditSetlist() {
     );
     setDraggingFrom(undefined);
     setDraggingId(undefined);
+    setNewSetSongId(undefined);
 
     if (draggingFrom === "repertoire" && to === "repertoire") {
       return;
@@ -296,27 +337,36 @@ export default function EditSetlist() {
     updateSpot({ ...newSpot!, dummy: undefined });
   };
 
-  // const finishDragging = (e: DragEvent<HTMLTableRowElement>) => {
-  //   console.log("finish drag");
-  //   e.preventDefault();
-  //   setSetlist(
-  //     (setlist) =>
-  //       setlist && {
-  //         ...setlist,
-  //         setSpots: setlist.setSpots.map((spot) => {
-  //           if (spot.dummy) {
-  //             // newSpot = spot;
-  //           }
-  //           return {
-  //             ...spot,
-  //             dummy: undefined,
-  //           };
-  //         }),
-  //       }
-  //   );
+  const dragOverNew = (e: DragEvent<any>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setNewSetSongId(draggingId);
+  };
 
-  //   setDraggingId(undefined);
-  // };
+  const leaveNew = (e: DragEvent<any>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setNewSetSongId(undefined);
+  };
+
+  const dropOnNew = (e: DragEvent<any>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDraggingFrom(undefined);
+    setDraggingId(undefined);
+    setNewSetSongId(undefined);
+    const newSpot = {
+      set: getPartitionedSets(setlist!).length,
+      songId: newSetSongId!,
+      spotPrio: 0,
+      dummy: undefined,
+    };
+    if (draggingFrom === "repertoire") {
+      createSpot(newSpot);
+    } else {
+      updateSpot(newSpot);
+    }
+  };
 
   const concertDurationMinutes = (
     setlist: setlist,
@@ -324,7 +374,8 @@ export default function EditSetlist() {
   ) => {
     const sets = getPartitionedSets(setlist);
     const breaks =
-      sets.length * setlist.breakBuffer + (sets.length - 1) * setlist.breakLen;
+      sets.length * setlist.breakBuffer +
+      Math.max(sets.length - 1, 0) * setlist.breakLen;
     const setLengths = [...sets, getEncore(setlist)].map(
       (set) =>
         Math.ceil(
@@ -381,6 +432,9 @@ export default function EditSetlist() {
       }
       sets[spot.set].push(spot);
     });
+    for (let i = 0; i < sets.length; i++) {
+      if (sets[i] === undefined) sets[i] = [];
+    }
     return sets;
   };
 
@@ -526,26 +580,29 @@ export default function EditSetlist() {
   };
 
   const setDisplay = (setSpots: setSpot[], index: number | string) => {
-    // TODO: fill up empty sets
-    index = typeof index === "string" ? index : `Set ${index + 1}`;
-    const setId = index.split(" ").join("-");
+    const setTitle = typeof index === "string" ? index : `Set ${index + 1}`;
+    const setId = setTitle.split(" ").join("-");
     return (
       <Card
-        key={`set-${index}`}
+        key={`set-${setTitle}`}
         className="w-full"
         onDragOver={dragOver(setId)}
         onDrop={dropSong(setId)}
       >
         <CardHeader>
-          <CardTitle className="font-bold text-2xl">{index}</CardTitle>
-          {typeof index === "number" && (
-            <CardAction>
-              <Button className="hover:bg-red-600/80" variant={"secondary"}>
-                <Trash2 />
-                Delete Set
-              </Button>
-            </CardAction>
-          )}
+          <CardTitle className="font-bold text-2xl">{setTitle}</CardTitle>
+          <CardAction>
+            <Button
+              onClick={() =>
+                typeof index === "number" ? deleteSet(index) : deleteEncore()
+              }
+              className="hover:bg-red-600/80"
+              variant={"secondary"}
+            >
+              <Trash2 />
+              {typeof index === "number" ? "Delete Set" : "Clear Encore"}
+            </Button>
+          </CardAction>
         </CardHeader>
         <CardContent>
           {setTable(
@@ -562,16 +619,29 @@ export default function EditSetlist() {
   };
 
   const PseudoSetDisplay = () => (
-    // TODO: drag over / drop
-    <Card className="relative w-full border-dashed h-60">
+    <Card
+      className={`relative w-full border-dashed h-60 ${
+        newSetSongId && "bg-green-900/50"
+      }`}
+      onDragOver={dragOverNew}
+      onDragLeave={leaveNew}
+      onDrop={dropOnNew}
+    >
       <CardHeader className="absolute w-full">
         <CardTitle className="realtive font-bold text-2xl">New Set</CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col w-full h-full items-center justify-center">
-        <div className="flex flex-col gap-2 items-center">
-          <Import />
-          Drag a song here to add a new set
-        </div>
+        {newSetSongId ? (
+          <div className="flex flex-col gap-2 items-center">
+            <Import />
+            Drop here
+          </div>
+        ) : (
+          <div className="flex flex-col gap-2 items-center">
+            <Import />
+            Drag a song here to add a new set
+          </div>
+        )}
       </CardContent>
     </Card>
   );

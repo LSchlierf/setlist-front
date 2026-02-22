@@ -21,6 +21,7 @@ function App() {
 
   const refetchUserData = () => {
     if (!loggedIn) return;
+    console.log("refetch");
     storage.getSetlists().then(setSetlists);
     storage.getRepertoireSize().then(setRepertoireSize);
   };
@@ -28,12 +29,18 @@ function App() {
   useEffect(refetchUserData, [loggedIn]);
 
   useEffect(() => {
+    document.title = "SongRack";
     storage.init().then((v) => {
       if (v) {
         setLoggedIn(true);
       }
+
+      storage.socket?.on("frontPage", refetchUserData);
     });
-    document.title = "SongRack";
+
+    return () => {
+      storage.socket?.off("frontPage", refetchUserData);
+    };
   }, []);
 
   const makeUsernameUppercase = (username: string) => {
