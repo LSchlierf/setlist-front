@@ -9,7 +9,7 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type DragEvent } from "react";
 import storage from "./lib/storage";
 import { type category, type setlist, type setSpot, type song } from "./types";
 import RepertoireTable from "./components/RepertoireTable";
@@ -59,16 +59,39 @@ export default function EditSetlist() {
   const [breakLen, setBreakLen] = useState<number>(20);
   const [breakBuf, setBreakBuf] = useState<number>(5);
   const [exportDialogOpen, setExportDialogOpen] = useState<boolean>(false);
+  const [draggingId, setDraggingId] = useState<string | undefined>(undefined);
+  const [draggingFrom, setDraggingFrom] = useState<string | undefined>(
+    undefined
+  );
 
   const backToMainPage = () => {
     navigate("/");
   };
 
-  const handleNameUpdate = (setlistId: string, newName: string) => {
-    if (setlist === undefined || setlistId !== setlist.id) return;
+  const handleNameUpdate = (newName: string) => {
+    // if (setlist === undefined || setlistId !== setlist.id) return;
     setSetlist((setlist) => ({
       ...setlist!,
       name: newName,
+    }));
+  };
+
+  const handleSpotCreate = (newSpot: setSpot) => {
+    setSetlist((setlist) => ({
+      ...setlist!,
+      setSpots: [
+        ...setlist!.setSpots.filter((s) => s.songId !== newSpot.songId),
+        newSpot,
+      ],
+    }));
+  };
+
+  const handleSpotUpdate = handleSpotCreate;
+
+  const handleSpotRemove = (songId: string) => {
+    setSetlist((setlist) => ({
+      ...setlist!,
+      setSpots: setlist!.setSpots.filter((s) => s.songId !== songId),
     }));
   };
 
@@ -100,9 +123,15 @@ export default function EditSetlist() {
         });
       });
       storage.getSetlistSocket(id)?.on("setlist:updateName", handleNameUpdate);
+      storage.getSetlistSocket(id)?.on("setlist:createSpot", handleSpotCreate);
+      storage.getSetlistSocket(id)?.on("setlist:updateSpot", handleSpotUpdate);
+      storage.getSetlistSocket(id)?.on("setlist:removeSpot", handleSpotRemove);
     });
 
     return () => {
+      storage.getSetlistSocket(id)?.off("setlist:removeSpot", handleSpotRemove);
+      storage.getSetlistSocket(id)?.off("setlist:updateSpot", handleSpotUpdate);
+      storage.getSetlistSocket(id)?.off("setlist:createSpot", handleSpotCreate);
       storage.getSetlistSocket(id)?.off("setlist:updateName", handleNameUpdate);
     };
   }, []);
@@ -114,13 +143,180 @@ export default function EditSetlist() {
   }, [setlist]);
 
   const finishEditingName = () => {
-    storage
-      .getSetlistSocket(id!)
-      ?.emit("setlist:updateName", setlist!.id, name);
-    handleNameUpdate(setlist!.id, name);
+    storage.getSetlistSocket(id!)?.emit("setlist:updateName", name);
+    handleNameUpdate(name);
     setName("");
     setEditingName(false);
   };
+
+  const createSpot = (newSpot: setSpot) => {
+    storage.getSetlistSocket(id!)?.emit("setlist:createSpot", newSpot);
+    handleSpotCreate(newSpot);
+  };
+
+  const updateSpot = (newSpot: setSpot) => {
+    storage.getSetlistSocket(id!)?.emit("setlist:updateSpot", newSpot);
+    handleSpotUpdate(newSpot);
+  };
+
+  const removeSpot = (songId: string) => {
+    storage.getSetlistSocket(id!)?.emit("setlist:removeSpot", songId);
+    handleSpotRemove(songId);
+  };
+
+  const startDragging =
+    (from: string) =>
+    (songId: string) =>
+    (e: DragEvent<HTMLTableRowElement>) => {
+      setDraggingFrom(from);
+      setDraggingId(songId);
+
+      e.dataTransfer.setData("pain/text", "dummy"); // required for safari
+    };
+
+  const dragOver = (to: string) => (e: DragEvent<any>) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const elements = document.getElementsByClassName(to);
+
+    let newIndex = 0;
+
+    for (const el of elements) {
+      if (el.getBoundingClientRect().bottom > e.clientY) break;
+      newIndex++;
+    }
+
+    let newSetIndex = -1;
+    if (to.startsWith("Set-")) {
+      newSetIndex += Number(to.substring(4));
+    }
+
+    let newSets = getPartitionedSets(setlist!);
+    let newEncore = getEncore(setlist!);
+
+    const findPrio = (setSpots: setSpot[], index: number) => {
+      if (setSpots.length === 0) {
+        return 0;
+      }
+      if (index === 0) {
+        return setSpots[0].spotPrio - 1;
+      }
+      if (index >= setSpots.length) {
+        return setSpots[setSpots.length - 1].spotPrio + 1;
+      }
+
+      return (setSpots[index - 1].spotPrio + setSpots[index].spotPrio) / 2;
+    };
+    let newPrio = -1;
+
+    if (newSetIndex < 0) {
+      newPrio = findPrio(
+        newEncore
+          .sort((a, b) => a.spotPrio - b.spotPrio)
+          .filter((s) => !s.dummy),
+        newIndex
+      );
+    } else {
+      newPrio = findPrio(
+        newSets[newSetIndex]
+          .sort((a, b) => a.spotPrio - b.spotPrio)
+          .filter((s) => !s.dummy),
+        newIndex
+      );
+    }
+
+    const dummySpot: setSpot & { dummy: true } = {
+      dummy: true,
+      set: newSetIndex,
+      songId: draggingId!,
+      spotPrio: newPrio,
+    };
+
+    setSetlist(
+      (setlist) =>
+        setlist && {
+          ...setlist,
+          setSpots: [
+            ...setlist?.setSpots.filter(
+              (s) => !s.dummy && s.songId !== draggingId
+            ),
+            dummySpot,
+          ],
+        }
+    );
+  };
+
+  const dragOut = (e: DragEvent<any>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setSetlist(
+      (setlist) =>
+        setlist && {
+          ...setlist,
+          setSpots: setlist.setSpots.filter((s) => s.songId !== draggingId),
+        }
+    );
+  };
+
+  const dropSong = (to: string) => (e: DragEvent<any>) => {
+    e.preventDefault();
+
+    let newSpot = setlist?.setSpots.find((spot) => spot.dummy);
+
+    setSetlist(
+      (setlist) =>
+        setlist && {
+          ...setlist,
+          setSpots: setlist.setSpots.map((spot) => ({
+            ...spot,
+            dummy: undefined,
+          })),
+        }
+    );
+    setDraggingFrom(undefined);
+    setDraggingId(undefined);
+
+    if (draggingFrom === "repertoire" && to === "repertoire") {
+      return;
+    }
+
+    if (draggingFrom === "repertoire") {
+      createSpot({
+        ...newSpot!,
+        dummy: undefined,
+      });
+      return;
+    }
+
+    if (to === "repertoire") {
+      removeSpot(draggingId!);
+      return;
+    }
+    updateSpot({ ...newSpot!, dummy: undefined });
+  };
+
+  // const finishDragging = (e: DragEvent<HTMLTableRowElement>) => {
+  //   console.log("finish drag");
+  //   e.preventDefault();
+  //   setSetlist(
+  //     (setlist) =>
+  //       setlist && {
+  //         ...setlist,
+  //         setSpots: setlist.setSpots.map((spot) => {
+  //           if (spot.dummy) {
+  //             // newSpot = spot;
+  //           }
+  //           return {
+  //             ...spot,
+  //             dummy: undefined,
+  //           };
+  //         }),
+  //       }
+  //   );
+
+  //   setDraggingId(undefined);
+  // };
 
   const concertDurationMinutes = (
     setlist: setlist,
@@ -132,7 +328,8 @@ export default function EditSetlist() {
     const setLengths = [...sets, getEncore(setlist)].map(
       (set) =>
         Math.ceil(
-          set.reduce((a, s) => a + (songMap.get(s.songId)?.length || 0), 0) /
+          (set?.reduce((a, s) => a + (songMap.get(s.songId)?.length || 0), 0) ||
+            0) /
             60 /
             5
         ) * 5
@@ -258,91 +455,113 @@ export default function EditSetlist() {
     return <TableCell>Unknown category type: {category.type}</TableCell>;
   };
 
-  const setTable = (spots: setSpot[]) => (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Song Title</TableHead>
-          <TableHead>Artist</TableHead>
-          <TableHead>Length</TableHead>
-          {categories
-            ?.filter((c) => c.show)
-            .map((c) => (
-              <TableHead key={c.id}>{c.title}</TableHead>
-            ))}
-          <TableHead>Notes</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {spots.map((spot) => {
-          const song = songs?.get(spot.songId);
-          if (!song) return;
-          return (
-            <TableRow key={song?.id}>
-              <TableCell>{song?.title}</TableCell>
-              <TableCell>{song?.artist}</TableCell>
-              <TableCell>
-                {
-                  <DurationInput
-                    editing={false}
-                    value={song.length}
-                    onChange={() => {}}
-                  />
-                }
-              </TableCell>
-              {categories
-                ?.filter((c) => c.show)
-                .map((c) => propertyDisplay(song, c))}
-              <TableCell>{song?.notes}</TableCell>
-            </TableRow>
-          );
-        })}
-      </TableBody>
-    </Table>
-  );
-
-  const setLength = (set: setSpot[]) => {
-    const sum = set.reduce(
-      (a: number, s) => a + (songs?.get(s?.songId)?.length || 0),
-      0
+  const setTable = (spots: setSpot[], set: string) => {
+    return (
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Song Title</TableHead>
+            <TableHead>Artist</TableHead>
+            <TableHead>Length</TableHead>
+            {categories
+              ?.filter((c) => c.show)
+              .map((c) => (
+                <TableHead key={c.id}>{c.title}</TableHead>
+              ))}
+            <TableHead>Notes</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {spots.map((spot) => {
+            const song = songs?.get(spot.songId);
+            if (!song) return;
+            return (
+              <TableRow
+                draggable
+                onDragStart={startDragging(set)(spot.songId)}
+                className={`${set} ${spot.dummy ? "brightness-50" : ""}`}
+                key={song?.id}
+              >
+                <TableCell>{song?.title}</TableCell>
+                <TableCell>{song?.artist}</TableCell>
+                <TableCell>
+                  {
+                    <DurationInput
+                      editing={false}
+                      value={song.length}
+                      onChange={() => {}}
+                    />
+                  }
+                </TableCell>
+                {categories
+                  ?.filter((c) => c.show)
+                  .map((c) => propertyDisplay(song, c))}
+                <TableCell>{song?.notes}</TableCell>
+              </TableRow>
+            );
+          })}
+        </TableBody>
+      </Table>
     );
+  };
+
+  const setLength = (set: setSpot[] | undefined) => {
+    const sum =
+      set?.reduce(
+        (a: number, s) => a + (songs?.get(s?.songId)?.length || 0),
+        0
+      ) || 0;
     return `${Math.floor(sum / 3600)}h ${Math.floor(sum / 60) % 60}m ${
       sum % 60
     }s`;
   };
 
-  const setLengthApprox = (set: setSpot[]) => {
-    const sum = set.reduce(
-      (a: number, s) => a + (songs?.get(s?.songId)?.length || 0),
-      0
-    );
+  const setLengthApprox = (set: setSpot[] | undefined) => {
+    const sum =
+      set?.reduce(
+        (a: number, s) => a + (songs?.get(s?.songId)?.length || 0),
+        0
+      ) || 0;
     return Math.ceil(sum / 60 / 5) * 5;
   };
 
-  const setDisplay = (setSpots: setSpot[], index: number | string) => (
-    <Card key={`set-${index}`} className="w-full">
-      <CardHeader>
-        <CardTitle className="font-bold text-2xl">
-          {typeof index === "string" ? index : `Set ${index + 1}`}
-        </CardTitle>
-        {typeof index === "number" && (
-          <CardAction>
-            <Button className="hover:bg-red-600/80" variant={"secondary"}>
-              <Trash2 />
-              Delete Set
-            </Button>
-          </CardAction>
-        )}
-      </CardHeader>
-      <CardContent>{setTable(setSpots.sort())}</CardContent>
-      <CardFooter>
-        {setSpots.length} Songs, ~{setLengthApprox(setSpots)} min (
-        {setLength(setSpots)})
-      </CardFooter>
-    </Card>
-  );
+  const setDisplay = (setSpots: setSpot[], index: number | string) => { // RODO: fill up empty sets
+    index = typeof index === "string" ? index : `Set ${index + 1}`;
+    const setId = index.split(" ").join("-");
+    return (
+      <Card
+        key={`set-${index}`}
+        className="w-full"
+        onDragOver={dragOver(setId)}
+        onDrop={dropSong(setId)}
+      >
+        <CardHeader>
+          <CardTitle className="font-bold text-2xl">{index}</CardTitle>
+          {typeof index === "number" && (
+            <CardAction>
+              <Button className="hover:bg-red-600/80" variant={"secondary"}>
+                <Trash2 />
+                Delete Set
+              </Button>
+            </CardAction>
+          )}
+        </CardHeader>
+        <CardContent>
+          {setTable(
+            setSpots.sort((a, b) => a.spotPrio - b.spotPrio),
+            setId
+          )}
+        </CardContent>
+        <CardFooter>
+          {setSpots.length} Songs, ~{setLengthApprox(setSpots)} min (
+          {setLength(setSpots)})
+        </CardFooter>
+      </Card>
+    );
+  };
 
   const PseudoSetDisplay = () => (
+    // TODO: drag over / drop
     <Card className="relative w-full border-dashed h-60">
       <CardHeader className="absolute w-full">
         <CardTitle className="realtive font-bold text-2xl">New Set</CardTitle>
@@ -528,6 +747,9 @@ export default function EditSetlist() {
             filterTerm={filter}
             usedSongs={new Set(setlist?.setSpots.map((v) => v.songId))}
             readonly
+            onDragStart={startDragging("repertoire")}
+            onDragOver={dragOut}
+            onDrop={dropSong("repertoire")}
           />
         </div>
       </div>

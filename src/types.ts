@@ -33,6 +33,7 @@ export type setSpot = {
   set: number;
   spotPrio: number;
   songId: string;
+  dummy: true | undefined;
 };
 
 export type InputProps<T> = {

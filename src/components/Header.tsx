@@ -20,7 +20,7 @@ export default function Header({ backButton, onLogin }: HeaderProps) {
             <div className="flex flex-row">
               <MusicIcon size={45} className="mr-2" />
               <h1 className="text-white text-3xl flex items-center">
-                SongRack
+                SongRack™
               </h1>
             </div>
           </div>

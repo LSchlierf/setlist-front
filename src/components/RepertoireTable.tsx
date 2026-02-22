@@ -19,7 +19,7 @@ import {
   TableRow,
 } from "./ui/table";
 import type { category, InputProps, song } from "@/types";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type DragEvent } from "react";
 import storage from "@/lib/storage";
 import { byArtist, byCategory, byLength, byTitle } from "@/lib/songSort";
 import { ButtonGroup } from "./ui/button-group";
@@ -47,6 +47,11 @@ export type RepertoireTableProps = {
   readonly?: boolean | undefined;
   filterTerm?: string | undefined;
   usedSongs?: Set<string> | undefined;
+  onDragStart?:
+    | ((songId: string) => (e: DragEvent<HTMLTableRowElement>) => void)
+    | undefined;
+  onDragOver?: ((e: DragEvent<any>) => void) | undefined;
+  onDrop?: ((e: DragEvent<any>) => void) | undefined;
 };
 
 export default function RepertoireTable({
@@ -54,6 +59,9 @@ export default function RepertoireTable({
   readonly = false,
   filterTerm,
   usedSongs = new Set(),
+  onDragStart,
+  onDragOver,
+  onDrop,
 }: RepertoireTableProps) {
   const [songs, setSongs] = useState<undefined | song[]>(undefined);
   const [editingSong, setEditingSong] = useState<string | undefined>(undefined);
@@ -479,7 +487,12 @@ export default function RepertoireTable({
     const { id, title, artist, length, notes } = song;
     const editing = editingSong === id;
     return (
-      <TableRow key={`song-${id}`}>
+      <TableRow
+        className="repertoire"
+        key={`song-${id}`}
+        draggable={readonly}
+        onDragStart={onDragStart?.(song.id)}
+      >
         <TableCell>
           {StringInput({ editing, value: title, onChange: editTtile(id) })}
         </TableCell>
@@ -565,7 +578,7 @@ export default function RepertoireTable({
 
   return (
     <>
-      <Table className="relative">
+      <Table onDragOver={onDragOver} onDrop={onDrop} className="relative">
         <TableHeader>
           <TableRow>
             <InherentPropertyHead
