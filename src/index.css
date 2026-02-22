@@ -122,3 +122,181 @@
     @apply bg-background text-foreground;
   }
 }
+
+@font-face {
+  font-family: poxast;
+  src: url("/fonts/Poxast-Regular.ttf")
+}
+
+.title-splash {
+  font-family: poxast;
+}
+
+.title-splash::before, .title-splash::after {
+  padding: 10px;
+  color: white;
+  content: "SongRack";
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background: var(--color-gray-950);
+  overflow: hidden;
+  top: 0;
+}
+.title-splash::before {
+  left: 1px;
+  text-shadow: -2px 0 red;
+  animation-name: glitch-animation-1;
+  animation-duration: 3s;
+  animation-timing-function: linear;
+  animation-delay: 0s;
+  animation-iteration-count: infinite;
+  animation-direction: reverse-alternate;
+}
+.title-splash::after {
+  left: -1px;
+  text-shadow: -2px 0 blue;
+  animation-name: glitch-animation-2;
+  animation-duration: 3s;
+  animation-timing-function: linear;
+  animation-delay: 0s;
+  animation-iteration-count: infinite;
+  animation-direction: reverse-alternate;
+}
+
+@keyframes glitch-animation-1 {
+  0% {
+    clip: rect(150px, 3000px, 112px, 3px);
+  }
+  5% {
+    clip: rect(16px, 3000px, 50px, 3px);
+  }
+  10% {
+    clip: rect(66px, 3000px, 65px, 3px);
+  }
+  15% {
+    clip: rect(5px, 3000px, 54px, 3px);
+  }
+  20% {
+    clip: rect(98px, 3000px, 113px, 3px);
+  }
+  25% {
+    clip: rect(121px, 3000px, 122px, 3px);
+  }
+  30% {
+    clip: rect(129px, 3000px, 16px, 3px);
+  }
+  35% {
+    clip: rect(100px, 3000px, 139px, 3px);
+  }
+  40% {
+    clip: rect(112px, 3000px, 89px, 3px);
+  }
+  45% {
+    clip: rect(92px, 3000px, 1px, 3px);
+  }
+  50% {
+    clip: rect(34px, 3000px, 70px, 3px);
+  }
+  55% {
+    clip: rect(130px, 3000px, 47px, 3px);
+  }
+  60% {
+    clip: rect(34px, 3000px, 138px, 3px);
+  }
+  65% {
+    clip: rect(127px, 3000px, 130px, 3px);
+  }
+  70% {
+    clip: rect(94px, 3000px, 67px, 3px);
+  }
+  75% {
+    clip: rect(58px, 3000px, 107px, 3px);
+  }
+  80% {
+    clip: rect(48px, 3000px, 26px, 3px);
+  }
+  85% {
+    clip: rect(66px, 3000px, 118px, 3px);
+  }
+  90% {
+    clip: rect(28px, 3000px, 47px, 3px);
+  }
+  95% {
+    clip: rect(16px, 3000px, 26px, 3px);
+  }
+  100% {
+    clip: rect(112px, 3000px, 15px, 3px);
+  }
+}
+@keyframes glitch-animation-2 {
+  0% {
+    clip: rect(6px, 3000px, 127px, 3px);
+  }
+  5% {
+    clip: rect(5px, 3000px, 46px, 3px);
+  }
+  10% {
+    clip: rect(30px, 3000px, 2px, 3px);
+  }
+  15% {
+    clip: rect(108px, 3000px, 123px, 3px);
+  }
+  20% {
+    clip: rect(93px, 3000px, 76px, 3px);
+  }
+  25% {
+    clip: rect(93px, 3000px, 130px, 3px);
+  }
+  30% {
+    clip: rect(35px, 3000px, 50px, 3px);
+  }
+  35% {
+    clip: rect(76px, 3000px, 40px, 3px);
+  }
+  40% {
+    clip: rect(64px, 3000px, 58px, 3px);
+  }
+  45% {
+    clip: rect(43px, 3000px, 66px, 3px);
+  }
+  50% {
+    clip: rect(48px, 3000px, 148px, 3px);
+  }
+  55% {
+    clip: rect(86px, 3000px, 135px, 3px);
+  }
+  60% {
+    clip: rect(109px, 3000px, 148px, 3px);
+  }
+  65% {
+    clip: rect(150px, 3000px, 72px, 3px);
+  }
+  70% {
+    clip: rect(29px, 3000px, 75px, 3px);
+  }
+  75% {
+    clip: rect(134px, 3000px, 83px, 3px);
+  }
+  80% {
+    clip: rect(53px, 3000px, 118px, 3px);
+  }
+  85% {
+    clip: rect(43px, 3000px, 138px, 3px);
+  }
+  90% {
+    clip: rect(84px, 3000px, 80px, 3px);
+  }
+  95% {
+    clip: rect(15px, 3000px, 28px, 3px);
+  }
+  100% {
+    clip: rect(108px, 3000px, 95px, 3px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .title-splash::before, .title-splash::after {
+    display: none
+  };
+}

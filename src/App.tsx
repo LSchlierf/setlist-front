@@ -7,6 +7,7 @@ import { Button } from "./components/ui/button";
 import { ArrowRight, FileUp, Music } from "lucide-react";
 import { Link } from "react-router";
 import SetlistIngestCard from "./components/SetlistIngestCard";
+import FrontPageSplash from "./components/FrontPageSplash";
 
 function App() {
   const [setlists, setSetlists] = useState<
@@ -48,7 +49,7 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen w-screen bg-gray-950">
+    <div className="min-h-screen w-screen bg-gray-950 flex flex-col">
       <Header onLogin={setLoggedIn} />
       {loggedIn ? (
         <div className="pt-8 px-30 flex flex-col gap-12">
@@ -114,7 +115,7 @@ function App() {
           )}
         </div>
       ) : (
-        <>Log tf in</>
+        <FrontPageSplash />
       )}
     </div>
   );
