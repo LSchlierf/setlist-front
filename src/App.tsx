@@ -13,7 +13,7 @@ function App() {
   const [setlists, setSetlists] = useState<
     Omit<SetlistCardProps, "onDelete">[] | undefined
   >(undefined);
-  const [loggedIn, setLoggedIn] = useState(false);
+  const [loggedIn, setLoggedIn] = useState<boolean | undefined>(undefined);
   const [repertoireSize, setRepertoireSize] = useState<number | undefined>(
     undefined
   );
@@ -34,6 +34,8 @@ function App() {
     storage.init().then((v) => {
       if (v) {
         setLoggedIn(true);
+      } else {
+        setLoggedIn(false);
       }
 
       storage.socket?.on("frontPage", refetchUserData);
@@ -48,6 +50,34 @@ function App() {
     return username[0].toUpperCase() + username.slice(1);
   };
 
+  const repertorieSizeText = (size: number) => {
+    const numbers = [
+      "",
+      "",
+      "two",
+      "three",
+      "four",
+      "five",
+      "six",
+      "seven",
+      "eight",
+      "nine",
+      "ten",
+      "eleven",
+      "twelve",
+    ];
+    if (size < 1) {
+      return "no songs";
+    }
+    if (size === 1) {
+      return "one song";
+    }
+    if (size < 13) {
+      return `${numbers[size]} songs`;
+    }
+    return `${size} songs`;
+  };
+
   return (
     <div className="min-h-screen w-screen bg-gray-950 flex flex-col">
       <Header onLogin={setLoggedIn} />
@@ -57,8 +87,10 @@ function App() {
             Welcome back, {makeUsernameUppercase(storage.user!.name)}!
           </div>
           <div className="flex flex-col gap-6">
-            {!!repertoireSize && (
-              <h2>You have {repertoireSize} Songs in your Repertoire</h2>
+            {repertoireSize !== undefined && (
+              <h2>
+                You have {repertorieSizeText(repertoireSize)} in your Repertoire
+              </h2>
             )}
             <div className="flex flex-row justify-between gap-4">
               <Link to="/editRepertoire">
@@ -114,6 +146,8 @@ function App() {
             />
           )}
         </div>
+      ) : loggedIn === undefined ? (
+        <></>
       ) : (
         <FrontPageSplash />
       )}
