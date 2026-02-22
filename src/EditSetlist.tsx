@@ -525,7 +525,8 @@ export default function EditSetlist() {
     return Math.ceil(sum / 60 / 5) * 5;
   };
 
-  const setDisplay = (setSpots: setSpot[], index: number | string) => { // RODO: fill up empty sets
+  const setDisplay = (setSpots: setSpot[], index: number | string) => {
+    // TODO: fill up empty sets
     index = typeof index === "string" ? index : `Set ${index + 1}`;
     const setId = index.split(" ").join("-");
     return (
