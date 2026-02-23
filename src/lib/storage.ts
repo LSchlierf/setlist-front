@@ -38,8 +38,9 @@ class storage {
   }
 
   static async initRepertoire() {
-    this._token = localStorage.getItem("AUTH_TOKEN") || undefined;
-    this._user = await this.testToken();
+    if (!(await this.init())) {
+      return undefined;
+    }
     if (this._user && this._token && !this._repertoireSocket) {
       this._repertoireSocket = io("/repertoire", {
         extraHeaders: {
@@ -53,8 +54,9 @@ class storage {
 
   static async initSetlist(setlistId: string) {
     if (!setlistId) return;
-    this._token = localStorage.getItem("AUTH_TOKEN") || undefined;
-    this._user = await this.testToken();
+    if (!(await this.init())) {
+      return undefined;
+    }
     if (this._user && this._token && !this._setlistSockets.has(setlistId)) {
       this._setlistSockets.set(
         setlistId,

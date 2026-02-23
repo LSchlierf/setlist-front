@@ -82,7 +82,6 @@ export default function EditSetlist() {
   };
 
   const handleNameUpdate = (newName: string) => {
-    // if (setlist === undefined || setlistId !== setlist.id) return;
     setSetlist((setlist) => ({
       ...setlist!,
       name: newName,
@@ -137,6 +136,25 @@ export default function EditSetlist() {
     );
   };
 
+  const refetchUserData = () => {
+    storage.getCategories().then(setCategories);
+    storage.getSongs().then((songs: song[]) => {
+      const songMap = new Map(songs.map((song) => [song.id, song]));
+      setSongs(songMap);
+      storage.getSetlist(id!).then((s: setlist) => {
+        setSetlist(s);
+        setBreakLen(s.breakLen);
+        setBreakBuf(s.breakBuffer);
+        if (s.fixedTime === "START") {
+          setStartTime(s.time);
+        } else {
+          setEndTime(s.time);
+        }
+        setFixedTime(s.fixedTime);
+      });
+    });
+  };
+
   useEffect(() => {
     if (id === undefined) {
       backToMainPage();
@@ -147,24 +165,7 @@ export default function EditSetlist() {
         backToMainPage();
         return;
       }
-      storage.getCategories().then(setCategories);
-      storage.getSongs().then((songs: song[]) => {
-        const songMap = new Map(songs.map((song) => [song.id, song]));
-        setSongs(songMap);
-        storage.getSetlist(id).then((s: setlist) => {
-          setSetlist(s);
-          setBreakLen(s.breakLen);
-          setBreakBuf(s.breakBuffer);
-          if (s.fixedTime === "START") {
-            // setEndTime(calculateEndTime(s, songMap));
-            setStartTime(s.time);
-          } else {
-            // setStartTime(calculateStartTime(s, songMap));
-            setEndTime(s.time);
-          }
-          setFixedTime(s.fixedTime);
-        });
-      });
+      refetchUserData();
       storage.getSetlistSocket(id)?.on("setlist:updateName", handleNameUpdate);
       storage.getSetlistSocket(id)?.on("setlist:createSpot", handleSpotCreate);
       storage.getSetlistSocket(id)?.on("setlist:updateSpot", handleSpotUpdate);
@@ -174,9 +175,11 @@ export default function EditSetlist() {
         .getSetlistSocket(id)
         ?.on("setlist:deleteEncore", handleEncoreDelete);
       storage.getSetlistSocket(id)?.on("setlist:timeUpdate", handleTimeUpdate);
+      storage.getSetlistSocket(id)?.on("setlist", refetchUserData);
     });
 
     return () => {
+      storage.getSetlistSocket(id)?.off("setlist", refetchUserData);
       storage.getSetlistSocket(id)?.off("setlist:timeUpdate", handleTimeUpdate);
       storage
         .getSetlistSocket(id)
@@ -225,6 +228,7 @@ export default function EditSetlist() {
 
   const finishEditingName = () => {
     storage.getSetlistSocket(id!)?.emit("setlist:updateName", name);
+    storage.socket?.emit("frontPage");
     handleNameUpdate(name);
     setName("");
     setEditingName(false);
@@ -247,7 +251,7 @@ export default function EditSetlist() {
 
   const deleteSet = (setIndex: number) => {
     storage.getSetlistSocket(id!)?.emit("setlist:deleteSet", setIndex);
-    // handleSetDelete(setIndex); // gets double fired otherwise
+    handleSetDelete(setIndex);
   };
 
   const deleteEncore = () => {

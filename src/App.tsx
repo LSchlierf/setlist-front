@@ -38,7 +38,7 @@ function App() {
         setLoggedIn(false);
       }
 
-      storage.socket?.on("frontPage", refetchUserData);
+      storage.socket!.on("frontPage", refetchUserData);
     });
 
     return () => {

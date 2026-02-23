@@ -140,7 +140,7 @@ export default function EditRepertoire() {
 
   const addCategory = (newCategory: category) => {
     storage.repertoireSocket?.emit("repertoire:addCategory", newCategory);
-    // handleCategoryCreate(newCategory);
+    handleCategoryCreate(newCategory);
   };
 
   const editCategory = (category: category) => {
