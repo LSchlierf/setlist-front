@@ -37,10 +37,17 @@ export default function SetlistIngestCard({
       }
       if (
         !newSetlist ||
-        !newSetlist.concert ||
-        !newSetlist.sets ||
-        !newSetlist.encore ||
-        !newSetlist.breaks
+        ((!newSetlist.concert ||
+          !newSetlist.sets ||
+          !newSetlist.encore ||
+          !newSetlist.breaks) &&
+          (!newSetlist.name ||
+            !newSetlist.id ||
+            !newSetlist.breakLen ||
+            !newSetlist.breakBuffer ||
+            !newSetlist.time ||
+            !newSetlist.fixedTime ||
+            !newSetlist.setSpots))
       ) {
         setError("Wrong file format for setlist");
         return;

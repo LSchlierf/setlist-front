@@ -24,7 +24,7 @@ export default function SetlistCard({
           <Button
             onClick={onDelete}
             variant={"secondary"}
-            className="hover:bg-red-600/80"
+            className="hover:bg-red-600/80 border"
           >
             <Trash2 />
           </Button>

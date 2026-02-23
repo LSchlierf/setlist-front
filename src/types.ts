@@ -48,3 +48,5 @@ export const categoryTypeLabels = {
   stringCategory: "Select",
   multipleStringCategory: "Multiselect",
 };
+
+export type setlistTimeDTO = Omit<setlist, "name" | "id" | "setSpots">;

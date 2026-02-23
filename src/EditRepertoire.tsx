@@ -140,7 +140,7 @@ export default function EditRepertoire() {
 
   const addCategory = (newCategory: category) => {
     storage.repertoireSocket?.emit("repertoire:addCategory", newCategory);
-    handleCategoryCreate(newCategory);
+    // handleCategoryCreate(newCategory);
   };
 
   const editCategory = (category: category) => {
@@ -255,6 +255,7 @@ export default function EditRepertoire() {
                       setColorCategory(category);
                     }}
                     variant={"secondary"}
+                    className="border"
                   >
                     <Palette />
                   </Button>
@@ -265,7 +266,7 @@ export default function EditRepertoire() {
                       deleteColors(id);
                     }}
                     variant={"secondary"}
-                    className="hover:bg-red-600/80"
+                    className="hover:bg-red-600/80 border"
                   >
                     <Trash2 />
                   </Button>

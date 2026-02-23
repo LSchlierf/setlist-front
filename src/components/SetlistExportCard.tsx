@@ -1,4 +1,4 @@
-import { downloadFile } from "@/lib/utils";
+import { downloadFile, getEncore, getPartitionedSets } from "@/lib/utils";
 import { Button } from "./ui/button";
 import {
   Card,
@@ -8,20 +8,28 @@ import {
   CardHeader,
   CardTitle,
 } from "./ui/card";
-import type { category } from "@/types";
+import type { category, setlist, setSpot, song } from "@/types";
 import { Checkbox } from "./ui/checkbox";
 import { useState } from "react";
 import { BlobProvider } from "@react-pdf/renderer";
 import SetlistSimplePDF from "./SetlistSimplePdf";
+import SetlistDetailedPDF from "./SetlistDetailedPdf";
+import storage from "@/lib/storage";
 
 export type SetlistExportCardProps = {
   onClose: () => void;
+  setlist: setlist;
   categories: category[];
+  songs: Map<string, song>;
+  startTime: string;
 };
 
 export default function SetlistExportCard({
   onClose,
+  setlist,
   categories,
+  songs,
+  startTime,
 }: SetlistExportCardProps) {
   const [cats, setCats] = useState<category[]>(categories);
 
@@ -47,6 +55,11 @@ export default function SetlistExportCard({
     </BlobProvider>
   );
 
+  const lookupSet = (set: setSpot[]) =>
+    set
+      .sort((a, b) => a.spotPrio - b.spotPrio)
+      .map((spot) => songs.get(spot.songId)!);
+
   return (
     <Card className="z-10 bg-gray-900 w-full max-w-sm fixed top-[50%] left-[50%] transform-(--center-transform)">
       <CardHeader>
@@ -61,11 +74,27 @@ export default function SetlistExportCard({
           <h2 className="text-lg font-bold">
             Download <code>.json</code> dump
           </h2>
-          <Button className="w-full border" variant={"secondary"}>
+          <Button
+            onClick={async () => {
+              downloadFile({
+                data: JSON.stringify(await storage.getSetlist(setlist.id), undefined, 2),
+                fileName: `Setlist ${setlist.name}.json`,
+                fileType: "text/json",
+              });
+            }}
+            className="w-full border"
+            variant={"secondary"}
+          >
             Download
           </Button>
           <h2 className="text-lg font-bold">Export to Simple pdf</h2>
-          {downloadLink(<SetlistSimplePDF concert="test" />)}
+          {downloadLink(
+            <SetlistSimplePDF
+              concert={setlist.name}
+              sets={getPartitionedSets(setlist.setSpots).map(lookupSet)}
+              encore={lookupSet(getEncore(setlist.setSpots))}
+            />
+          )}
           <h2 className="text-lg font-bold">Export to Detailed pdf</h2>
           <div className="flex flex-col gap-1">
             Select categories to include:
@@ -86,7 +115,17 @@ export default function SetlistExportCard({
               </div>
             ))}
           </div>
-          {downloadLink(<SetlistSimplePDF concert="test" />)}
+          {downloadLink(
+            <SetlistDetailedPDF
+              concert={setlist.name}
+              breakLength={setlist.breakLen}
+              bufferLength={setlist.breakBuffer}
+              categories={categories.filter((c) => c.show)}
+              startTime={startTime}
+              sets={getPartitionedSets(setlist.setSpots).map(lookupSet)}
+              encore={lookupSet(getEncore(setlist.setSpots))}
+            />
+          )}
         </div>
       </CardContent>
       <CardFooter>

@@ -1,3 +1,4 @@
+import type { setSpot } from "@/types";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 
@@ -100,4 +101,31 @@ export function HSLToRGB({ h, s, l }: { h: number; s: number; l: number }) {
     g: Math.round(g * 255),
     b: Math.round(b * 255),
   };
+}
+
+export function getPartitionedSets(setSpots: setSpot[]) {
+  let sets = [] as setSpot[][];
+  setSpots.forEach((spot) => {
+    if (spot.set < 0) {
+      return;
+    }
+    if (!sets[spot.set]) {
+      sets[spot.set] = [] as setSpot[];
+    }
+    sets[spot.set].push(spot);
+  });
+  for (let i = 0; i < sets.length; i++) {
+    if (sets[i] === undefined) sets[i] = [];
+  }
+  return sets;
+}
+
+export function getEncore(setSpots: setSpot[]) {
+  let encore = [] as setSpot[];
+  setSpots.forEach((spot) => {
+    if (spot.set < 0) {
+      encore.push(spot);
+    }
+  });
+  return encore;
 }
