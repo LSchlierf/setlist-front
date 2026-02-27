@@ -71,22 +71,6 @@ export default function SetlistExportCard({
       </CardHeader>
       <CardContent>
         <div className="flex flex-col gap-4">
-          <h2 className="text-lg font-bold">
-            Download <code>.json</code> dump
-          </h2>
-          <Button
-            onClick={async () => {
-              downloadFile({
-                data: JSON.stringify(await storage.getSetlist(setlist.id), undefined, 2),
-                fileName: `Setlist ${setlist.name}.json`,
-                fileType: "text/json",
-              });
-            }}
-            className="w-full border"
-            variant={"secondary"}
-          >
-            Download
-          </Button>
           <h2 className="text-lg font-bold">Export to Simple pdf</h2>
           {downloadLink(
             <SetlistSimplePDF
@@ -120,12 +104,32 @@ export default function SetlistExportCard({
               concert={setlist.name}
               breakLength={setlist.breakLen}
               bufferLength={setlist.breakBuffer}
-              categories={categories.filter((c) => c.show)}
+              categories={cats.filter((c) => c.show)}
               startTime={startTime}
               sets={getPartitionedSets(setlist.setSpots).map(lookupSet)}
               encore={lookupSet(getEncore(setlist.setSpots))}
             />
           )}
+          <h2 className="text-lg font-bold">
+            Download <code>.json</code> dump
+          </h2>
+          <Button
+            onClick={async () => {
+              downloadFile({
+                data: JSON.stringify(
+                  await storage.getSetlist(setlist.id),
+                  undefined,
+                  2
+                ),
+                fileName: `Setlist ${setlist.name}.json`,
+                fileType: "text/json",
+              });
+            }}
+            className="w-full border"
+            variant={"secondary"}
+          >
+            Download
+          </Button>
         </div>
       </CardContent>
       <CardFooter>

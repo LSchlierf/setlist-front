@@ -26,7 +26,7 @@ export default function RepertoireImportExportCard({
 
   const downloadJson = async () => {
     downloadFile({
-      data: JSON.stringify(await storage.getFullRepertoire()),
+      data: JSON.stringify(await storage.getFullRepertoire(), undefined, 2),
       fileName: "repertoire.json",
       fileType: "text/json",
     });
@@ -100,11 +100,11 @@ export default function RepertoireImportExportCard({
               </Label>
               <Input onInput={ingestJson} id="repertoireImport" type="file" />
             </div>
-            <Button onClick={downloadJson} variant={"secondary"}>
-              Export to <code>.json</code>
-            </Button>
             <Button onClick={downloadTXT} variant={"secondary"}>
               Export Title/Artist to <code>.txt</code>
+            </Button>
+            <Button onClick={downloadJson} variant={"secondary"}>
+              Export to <code>.json</code>
             </Button>
           </div>
         </CardContent>

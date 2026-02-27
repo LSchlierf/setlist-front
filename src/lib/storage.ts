@@ -27,7 +27,7 @@ class storage {
     this._token = localStorage.getItem("AUTH_TOKEN") || undefined;
     this._user = await this.testToken();
     if (this._user && this._token && !this._socket) {
-      this._socket = io({
+      this._socket = io("/main", {
         extraHeaders: {
           token: this._token,
         },
@@ -229,75 +229,6 @@ class storage {
       body: repertoire,
     }).then();
   }
-
-  // static async getRepertoire() {
-  //     const repertoire = await fetch('/api/repertoire', {
-  //         method: 'GET',
-  //         headers: {
-  //             'Accept': 'application/json',
-  //             'Authorization': `Bearer ${token}`
-  //         }
-  //     }).then(response => response.json()).catch(() => undefined) || {}
-  //     return repertoire
-  // }
-
-  // static async saveRepertoire(repertoire) {
-  //     await fetch('/api/repertoire', {
-  //         method: 'POST',
-  //         headers: {
-  //             'Content-Type': 'application/json',
-  //             'Authorization': `Bearer ${this.token}`
-  //         },
-  //         body: JSON.stringify(repertoire)
-  //     })
-  //     return await this.getRepertoire()
-  // }
-
-  // static async getSetlist(id) {
-  //     const token = Cookies.get('token')
-  //     return await fetch(`/api/setlist/${id}`, {
-  //         method: 'GET',
-  //         headers: {
-  //             'Accept': 'application/json',
-  //             'Authorization': `Bearer ${token}`
-  //         }
-  //     }).then(response => response.json())
-  // }
-
-  // static async addSetlist() {
-  //     const token = Cookies.get('token')
-  //     return await fetch('/api/setlist', {
-  //         method: 'POST',
-  //         headers: {
-  //             'Accept': 'text/plain',
-  //             'Authorization': `Bearer ${token}`
-  //         }
-  //     }).then(response => response.text())
-  // }
-
-  // static async updateSetlist(id, setlist) {
-  //     const token = Cookies.get('token')
-  //     await fetch(`/api/setlist/${id}`, {
-  //         method: 'POST',
-  //         headers: {
-  //             'Content-Type': 'application/json',
-  //             'Authorization': `Bearer ${token}`
-  //         },
-  //         body: JSON.stringify(setlist)
-  //     })
-  //     return await this.getSetlist(id)
-  // }
-
-  // static async deleteSetlist(id) {
-  //     const token = Cookies.get('token')
-  //     await fetch(`/api/setlist/${id}`, {
-  //         method: 'DELETE',
-  //         headers: {
-  //             'Authorization': `Bearer ${token}`
-  //         }
-  //     })
-  //     return await this.getSetlists()
-  // }
 }
 
 export default storage;

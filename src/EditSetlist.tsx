@@ -228,7 +228,7 @@ export default function EditSetlist() {
 
   const finishEditingName = () => {
     storage.getSetlistSocket(id!)?.emit("setlist:updateName", name);
-    storage.socket?.emit("frontPage");
+    // storage.socket?.emit("frontPage");
     handleNameUpdate(name);
     setName("");
     setEditingName(false);

@@ -367,23 +367,41 @@ export default function RepertoireTable({
     if (!editing) return song.properties[category.id];
 
     return (
-      <Input
-        type="number"
-        className="w-20"
-        value={song.properties[category.id]}
-        min={Math.min(...category.valueRange)}
-        max={Math.max(...category.valueRange)}
-        onChange={(e) => {
-          changeSimpleSongProperty(
-            song.id,
-            category.id,
-            Math.max(
-              Math.min(...category.valueRange),
-              Math.min(Math.max(...category.valueRange), Number(e.target.value))
-            )
-          );
-        }}
-      />
+      <ButtonGroup>
+        <Input
+          type="number"
+          className="w-20"
+          value={
+            song.properties[category.id] === undefined
+              ? ""
+              : song.properties[category.id]
+          }
+          min={Math.min(...category.valueRange)}
+          max={Math.max(...category.valueRange)}
+          onChange={(e) => {
+            changeSimpleSongProperty(
+              song.id,
+              category.id,
+              Math.max(
+                Math.min(...category.valueRange),
+                Math.min(
+                  Math.max(...category.valueRange),
+                  Number(e.target.value)
+                )
+              )
+            );
+          }}
+        />
+        <Button
+          variant={"ghost"}
+          className="border"
+          onClick={() =>
+            changeSimpleSongProperty(song.id, category.id, undefined)
+          }
+        >
+          <X />
+        </Button>
+      </ButtonGroup>
     );
   };
 

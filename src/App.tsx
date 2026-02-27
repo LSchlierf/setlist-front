@@ -1,13 +1,26 @@
 import { useEffect, useState } from "react";
 import Header from "./components/Header";
 import storage from "./lib/storage";
-import SetlistCard, { type SetlistCardProps } from "./components/SetlistCard";
 import PseudoSetlistCard from "./components/PseudoSetlistCard";
 import { Button } from "./components/ui/button";
-import { ArrowRight, FileUp, Music } from "lucide-react";
+import { ArrowRight, FileUp, Music, Trash2 } from "lucide-react";
 import { Link } from "react-router";
 import SetlistIngestCard from "./components/SetlistIngestCard";
 import FrontPageSplash from "./components/FrontPageSplash";
+import {
+  Card,
+  CardAction,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "./components/ui/card";
+
+type SetlistCardProps = {
+  id: string;
+  name: string;
+  sets: number;
+  onDelete: () => void;
+};
 
 function App() {
   const [setlists, setSetlists] = useState<
@@ -21,28 +34,28 @@ function App() {
     useState<boolean>(false);
 
   const refetchUserData = () => {
-    if (!loggedIn) return;
-    console.log("refetch");
     storage.getSetlists().then(setSetlists);
     storage.getRepertoireSize().then(setRepertoireSize);
   };
 
-  useEffect(refetchUserData, [loggedIn]);
+  useEffect(() => {
+    if (loggedIn) refetchUserData();
+  }, [loggedIn]);
 
   useEffect(() => {
     document.title = "SongRack";
     storage.init().then((v) => {
-      if (v) {
+      if (v !== undefined) {
         setLoggedIn(true);
       } else {
         setLoggedIn(false);
       }
 
-      storage.socket!.on("frontPage", refetchUserData);
+      storage.socket!.on("refresh", refetchUserData);
     });
 
     return () => {
-      storage.socket?.off("frontPage", refetchUserData);
+      storage.socket?.off("refresh", refetchUserData);
     };
   }, []);
 
@@ -77,6 +90,31 @@ function App() {
     }
     return `${size} songs`;
   };
+
+  const setlistCard = ({ onDelete, id, name, sets }: SetlistCardProps) => (
+    <Card key={id} className="flex flex-col justify-between">
+      <CardHeader className="text-2xl">
+        <CardTitle>{name}</CardTitle>
+        <CardAction>
+          <Button
+            onClick={onDelete}
+            variant={"secondary"}
+            className="hover:bg-red-600/80 border"
+          >
+            <Trash2 />
+          </Button>
+        </CardAction>
+      </CardHeader>
+      <CardFooter className="flex flex-col items-start gap-4">
+        {sets} sets
+        <Link className="w-full" to={`/editSetlist/${id}`}>
+          <Button className="w-full">
+            Edit Setlist <ArrowRight />
+          </Button>
+        </Link>
+      </CardFooter>
+    </Card>
+  );
 
   return (
     <div className="min-h-screen w-screen bg-gray-950 flex flex-col">
@@ -119,15 +157,24 @@ function App() {
               </Button>
             </span>
             <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
-              {setlists?.map((p) => (
-                <SetlistCard
-                  key={p.id}
-                  onDelete={() => {
-                    storage.deleteSetlist(p.id).then(refetchUserData);
-                  }}
-                  {...p}
-                />
-              ))}
+              {
+                setlists?.map((p) =>
+                  setlistCard({
+                    onDelete: () =>
+                      storage.deleteSetlist(p.id).then(refetchUserData),
+                    ...p,
+                  })
+                )
+                //  (
+
+                //     key={p.id}
+                //     onDelete={() => {
+                //       storage.deleteSetlist(p.id).then(refetchUserData);
+                //     }}
+                //     {...p}
+
+                // ))
+              }
               <PseudoSetlistCard
                 onClick={() => {
                   storage.addSetlist().then((id) => {
