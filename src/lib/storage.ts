@@ -83,10 +83,17 @@ class storage {
         Authorization: `Bearer ${this._token}`,
       },
     })
-      .then((response) => response.text())
+      .then((response) => {
+        if (!response.ok) return;
+        return response.text();
+      })
       .catch(() => undefined);
 
-    return !!userInfo && JSON.parse(userInfo);
+    if (!userInfo) {
+      this.logout();
+      return;
+    }
+    return JSON.parse(userInfo);
   }
 
   static logout() {

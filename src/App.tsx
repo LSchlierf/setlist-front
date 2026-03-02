@@ -51,7 +51,7 @@ function App() {
         setLoggedIn(false);
       }
 
-      storage.socket!.on("refresh", refetchUserData);
+      storage.socket?.on("refresh", refetchUserData);
     });
 
     return () => {
