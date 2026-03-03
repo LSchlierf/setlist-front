@@ -65,13 +65,15 @@ export default function SetlistExportCard({
       <CardHeader>
         <CardTitle>Export Setlist</CardTitle>
         <CardDescription>
-          Export your setlist to a <code>.json</code> dump, a simple stage{" "}
-          <code>.pdf</code>, or a detailed FOH-ready <code>.pdf</code>
+          Export your setlist to a a simple stage <code>.pdf</code>, a detailed
+          FOH-ready <code>.pdf</code>, or download the <code>.json</code> dump.
         </CardDescription>
       </CardHeader>
       <CardContent>
         <div className="flex flex-col gap-4">
-          <h2 className="text-lg font-bold">Export to Simple pdf</h2>
+          <h2 className="text-lg font-bold">
+            Export to Simple <code>PDF</code>
+          </h2>
           {downloadLink(
             <SetlistSimplePDF
               concert={setlist.name}
@@ -79,7 +81,9 @@ export default function SetlistExportCard({
               encore={lookupSet(getEncore(setlist.setSpots))}
             />
           )}
-          <h2 className="text-lg font-bold">Export to Detailed pdf</h2>
+          <h2 className="text-lg font-bold">
+            Export to Detailed <code>PDF</code>
+          </h2>
           <div className="flex flex-col gap-1">
             Select categories to include:
             {cats.map((c) => (

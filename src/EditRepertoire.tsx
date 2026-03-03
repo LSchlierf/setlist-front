@@ -307,7 +307,7 @@ export default function EditRepertoire() {
         }
         onLogin={(loggedIn) => !loggedIn && backToMainPage()}
       />
-      <div className="flex flex-col gap-8 pt-8 px-30">
+      <div className="flex flex-col gap-8 pt-8 px-5 lg:px-30">
         <div className="font-bold text-2xl">Your Repertoire:</div>
         <RepertoireTable categories={categories || []} />
         <div className="flex flex-col gap-6">

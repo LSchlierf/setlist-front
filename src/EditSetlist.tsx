@@ -705,7 +705,7 @@ export default function EditSetlist() {
 
   const setlistBank = () => (
     <ResizablePanel defaultSize={"70%"}>
-      <div className="p-4 px-30 h-full w-screen overflow-scroll">
+      <div className="p-4 px-5 lg:px-30 h-full w-screen overflow-scroll">
         <div className="w-fit flex flex-col gap-6">
           <h1 className="text-2xl font-bold flex flex-row gap-2 items-center">
             {editingName ? (

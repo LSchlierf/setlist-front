@@ -120,7 +120,7 @@ function App() {
     <div className="min-h-screen w-screen bg-gray-950 flex flex-col">
       <Header onLogin={setLoggedIn} />
       {loggedIn ? (
-        <div className="pt-8 px-30 flex flex-col gap-12">
+        <div className="pt-8 px-5 lg:px-30 flex flex-col gap-12">
           <div className="text-5xl font-bold">
             Welcome back, {makeUsernameUppercase(storage.user!.name)}!
           </div>
@@ -153,28 +153,17 @@ function App() {
                 )}
               </h2>
               <Button onClick={() => setIngestSetlistCardOpen(true)}>
-                <FileUp /> Import setlist from <code>.json</code>
+                <FileUp /> Import Setlist from <code>.json</code>
               </Button>
             </span>
             <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
-              {
-                setlists?.map((p) =>
-                  setlistCard({
-                    onDelete: () =>
-                      storage.deleteSetlist(p.id).then(refetchUserData),
-                    ...p,
-                  })
-                )
-                //  (
-
-                //     key={p.id}
-                //     onDelete={() => {
-                //       storage.deleteSetlist(p.id).then(refetchUserData);
-                //     }}
-                //     {...p}
-
-                // ))
-              }
+              {setlists?.map((p) =>
+                setlistCard({
+                  onDelete: () =>
+                    storage.deleteSetlist(p.id).then(refetchUserData),
+                  ...p,
+                })
+              )}
               <PseudoSetlistCard
                 onClick={() => {
                   storage.addSetlist().then((id) => {
