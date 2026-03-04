@@ -78,7 +78,10 @@ export default function RepertoireTable({
   };
 
   const handleSongCreate = (newSong: song) => {
-    setSongs((songs) => [...(songs || []), newSong]);
+    setSongs((songs) => [
+      ...(songs?.filter((s) => s.id !== newSong.id) || []),
+      newSong,
+    ]);
     if (!!sorting) {
       switch (sorting.field) {
         case "title":
@@ -158,23 +161,52 @@ export default function RepertoireTable({
       storage.repertoireSocket?.off("repertoire:updateSong", handleSongUpdate);
       storage.repertoireSocket?.off("repertoire:addSong", handleSongCreate);
       storage.repertoireSocket?.off("repertoire", refetchUserData);
+      storage.clearHistory();
     };
   }, []);
 
   const addSong = (newSong: song) => {
-    storage.repertoireSocket?.emit("repertoire:addSong", newSong);
-    handleSongCreate(newSong);
+    storage.do({
+      fw: () => {
+        storage.repertoireSocket?.emit("repertoire:addSong", newSong);
+        handleSongCreate(newSong);
+      },
+      rv: () => {
+        storage.repertoireSocket?.emit("repertoire:deleteSong", newSong.id);
+        handleSongDelete(newSong.id);
+      },
+    });
   };
 
   const finishEditingSong = (song: song) => {
-    storage.repertoireSocket?.emit("repertoire:updateSong", song);
+    storage.do({
+      fw: () => {
+        storage.repertoireSocket?.emit("repertoire:updateSong", song);
+        handleSongUpdate(song);
+      },
+      rv: () => {
+        storage.repertoireSocket?.emit(
+          "repertoire:updateSong",
+          editedSongBefore
+        );
+        handleSongUpdate(editedSongBefore!);
+      },
+    });
     setEditingSong(undefined);
     setEditedSongBefore(undefined);
   };
 
-  const deleteSong = (songId: string) => () => {
-    storage.repertoireSocket?.emit("repertoire:deleteSong", songId);
-    setSongs((songs) => songs?.filter((s) => s.id !== songId));
+  const deleteSong = (song: song) => () => {
+    storage.do({
+      fw: () => {
+        storage.repertoireSocket?.emit("repertoire:deleteSong", song.id);
+        handleSongDelete(song.id);
+      },
+      rv: () => {
+        storage.repertoireSocket?.emit("repertoire:addSong", song);
+        handleSongCreate(song);
+      },
+    });
   };
 
   const InherentPropertyHead = ({
@@ -572,7 +604,7 @@ export default function RepertoireTable({
               <Button
                 className="hover:bg-red-600/80 border"
                 variant={"secondary"}
-                onClick={deleteSong(id)}
+                onClick={deleteSong(song)}
               >
                 <Trash2 />
                 Delete

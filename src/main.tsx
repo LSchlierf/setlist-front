@@ -6,8 +6,20 @@ import EditSetlist from "./EditSetlist";
 import EditRepertoire from "./EditRepertoire";
 import { TooltipProvider } from "./components/ui/tooltip";
 import { StrictMode } from "react";
+import storage from "./lib/storage";
 
 const root = document.getElementById("root")!;
+
+window.addEventListener("keydown", (e) => {
+  if (e.ctrlKey && e.key === "z") {
+    storage.undo();
+    return;
+  }
+  if (e.ctrlKey && e.key === "y") {
+    storage.redo();
+    return;
+  }
+});
 
 ReactDOM.createRoot(root).render(
   <StrictMode>

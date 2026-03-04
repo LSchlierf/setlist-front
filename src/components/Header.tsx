@@ -13,7 +13,7 @@ export default function Header({ backButton, onLogin }: HeaderProps) {
 
   return (
     <>
-      <header className="bg-gray-900/50 flex p-4 px-5 lg:px-30 border-b border-gray-800">
+      <header className="bg-gray-900 flex p-4 px-5 lg:px-30 border-b border-gray-800 sticky top-0 w-screen z-5">
         <div className="flex items-center justify-between px-auto w-full">
           <div className="flex items-center">
             {backButton}

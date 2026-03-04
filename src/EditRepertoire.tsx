@@ -42,7 +42,10 @@ export default function EditRepertoire() {
   };
 
   const handleCategoryCreate = (newCategory: category) => {
-    setCategories((categories) => [...(categories || []), newCategory]);
+    setCategories((categories) => [
+      ...(categories?.filter((c) => c.id !== newCategory.id) || []),
+      newCategory,
+    ]);
   };
 
   const handleCategoryUpdate = (newCategory: category) => {
@@ -135,22 +138,56 @@ export default function EditRepertoire() {
         handleCategoryCreate
       );
       storage.repertoireSocket?.off("repertoire", refetchUserData);
+      storage.clearHistory();
     };
   }, []);
 
   const addCategory = (newCategory: category) => {
-    storage.repertoireSocket?.emit("repertoire:addCategory", newCategory);
-    handleCategoryCreate(newCategory);
+    storage.do({
+      fw: () => {
+        storage.repertoireSocket?.emit("repertoire:addCategory", newCategory);
+        handleCategoryCreate(newCategory);
+      },
+      rv: () => {
+        storage.repertoireSocket?.emit(
+          "repertoire:deleteCategory",
+          newCategory.id
+        );
+        handleCategoryDelete(newCategory.id);
+      },
+    });
   };
 
-  const editCategory = (category: category) => {
-    storage.repertoireSocket?.emit("repertoire:updateCategory", category);
-    handleCategoryUpdate(category);
+  const editCategory = (category: category, oldCategory: category) => {
+    storage.do({
+      fw: () => {
+        storage.repertoireSocket?.emit("repertoire:updateCategory", category);
+        handleCategoryUpdate(category);
+      },
+      rv: () => {
+        storage.repertoireSocket?.emit(
+          "repertoire:updateCategory",
+          oldCategory
+        );
+        handleCategoryUpdate(oldCategory);
+      },
+    });
   };
 
-  const deleteCategory = (categoryId: string) => {
-    storage.repertoireSocket?.emit("repertoire:deleteCategory", categoryId);
-    handleCategoryDelete(categoryId);
+  const deleteCategory = (category: category) => {
+    storage.do({
+      fw: () => {
+        storage.repertoireSocket?.emit(
+          "repertoire:deleteCategory",
+          category.id
+        );
+        handleCategoryDelete(category.id);
+      },
+      rv: () => {
+        storage.repertoireSocket?.emit("repertoire:addCategory", category);
+        handleCategoryCreate(category);
+      },
+    });
   };
 
   const setColors = (categoryId: string, colors: { [key: string]: string }) => {
@@ -224,10 +261,13 @@ export default function EditRepertoire() {
               <Checkbox
                 checked={show}
                 onCheckedChange={(checked) =>
-                  editCategory({
-                    ...category,
-                    show: checked as boolean,
-                  })
+                  editCategory(
+                    {
+                      ...category,
+                      show: checked as boolean,
+                    },
+                    category
+                  )
                 }
               />
             </div>
@@ -276,7 +316,7 @@ export default function EditRepertoire() {
             <Button
               className="w-full hover:bg-red-600/80 border"
               variant={"secondary"}
-              onClick={() => deleteCategory(id)}
+              onClick={() => deleteCategory(category)}
             >
               <Trash2 /> Delete
             </Button>
@@ -298,7 +338,7 @@ export default function EditRepertoire() {
   };
 
   return (
-    <div className="min-h-screen w-screen bg-gray-950">
+    <div className="min-h-screen w-screen bg-gray-950 relative">
       <Header
         backButton={
           <Link to="/" className="pr-4">
