@@ -15,6 +15,8 @@ class storage {
   private static _token: string | undefined = undefined;
   private static _undoHistory: History = [];
   private static _redoHistory: History = [];
+  private static _undoCallbacks = new Set<(canUndo: boolean) => void>();
+  private static _redoCallbacks = new Set<(canRedo: boolean) => void>();
 
   static clearHistory() {
     console.log("clear");
@@ -27,28 +29,61 @@ class storage {
     this._redoHistory = [];
     action.fw();
     this._undoHistory.push(action);
+
+    this._undoCallbacks.forEach((fn) => fn(this.canUndo()));
+    this._redoCallbacks.forEach((fn) => fn(this.canRedo()));
+  }
+
+  static canUndo() {
+    return this._undoHistory.length > 0;
   }
 
   static undo() {
     console.log("undo");
-    if (this._undoHistory.length < 1) {
+    if (!this.canUndo()) {
       console.log("empty");
       return;
     }
     const element = this._undoHistory.pop()!;
     element.rv();
     this._redoHistory.push({ fw: element.rv, rv: element.fw });
+
+    this._undoCallbacks.forEach((fn) => fn(this.canUndo()));
+    this._redoCallbacks.forEach((fn) => fn(this.canRedo()));
+  }
+
+  static canRedo() {
+    return this._redoHistory.length > 0;
   }
 
   static redo() {
     console.log("redo");
-    if (this._redoHistory.length < 1) {
+    if (!this.canRedo()) {
       console.log("empty");
       return;
     }
     const element = this._redoHistory.pop()!;
     element.rv();
     this._undoHistory.push({ fw: element.rv, rv: element.fw });
+
+    this._undoCallbacks.forEach((fn) => fn(this.canUndo()));
+    this._redoCallbacks.forEach((fn) => fn(this.canRedo()));
+  }
+
+  static registerUndoCallback(fn: (canUndo: boolean) => void) {
+    this._undoCallbacks.add(fn);
+  }
+
+  static removeUndoCallback(fn: (canUndo: boolean) => void) {
+    this._undoCallbacks.delete(fn);
+  }
+
+  static registerRedoCallback(fn: (canUndo: boolean) => void) {
+    this._redoCallbacks.add(fn);
+  }
+
+  static removeRedoCallback(fn: (canUndo: boolean) => void) {
+    this._redoCallbacks.delete(fn);
   }
 
   static get user() {

@@ -19,7 +19,11 @@ import {
 
 export type CategoryColorCardProps = {
   category: category;
-  onFinish: (categoryId: string, colors: { [key: string]: string }) => void;
+  onFinish: (
+    categoryId: string,
+    colors: { [key: string]: string },
+    colorsBefore: { [key: string]: string } | undefined
+  ) => void;
   onClose: () => void;
 };
 
@@ -50,6 +54,7 @@ export default function CategoryColorCard({
   onFinish,
   onClose,
 }: CategoryColorCardProps) {
+  const colorsBefore: { [key: string]: string } | undefined = category.colors;
   const makeColorsObject = () => {
     let obj: { [key: string]: string } = category.colors || {};
     category.valueRange.forEach((v) => {
@@ -198,7 +203,7 @@ export default function CategoryColorCard({
         <div className="w-full flex flex-col gap-2">
           <Button
             onClick={() => {
-              onFinish(category.id, colors);
+              onFinish(category.id, colors, colorsBefore);
               onClose();
             }}
             className="w-full"

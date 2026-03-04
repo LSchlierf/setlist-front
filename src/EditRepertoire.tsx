@@ -190,17 +190,51 @@ export default function EditRepertoire() {
     });
   };
 
-  const setColors = (categoryId: string, colors: { [key: string]: string }) => {
-    storage.repertoireSocket?.emit("repertoire:setColors", {
-      categoryId,
-      colors,
+  const setColors = (
+    categoryId: string,
+    colors: { [key: string]: string },
+    colorsBefore: { [key: string]: string } | undefined
+  ) => {
+    storage.do({
+      fw: () => {
+        storage.repertoireSocket?.emit("repertoire:setColors", {
+          categoryId,
+          colors,
+        });
+        handleColorUpdate({ categoryId, colors });
+      },
+      rv: () => {
+        if (colorsBefore === undefined) {
+          storage.repertoireSocket?.emit("repertoire:deleteColors", categoryId);
+          handleColorDelete(categoryId);
+        } else {
+          storage.repertoireSocket?.emit("repertoire:setColors", {
+            categoryId,
+            colors: colorsBefore,
+          });
+          handleColorUpdate({ categoryId, colors: colorsBefore });
+        }
+      },
     });
-    handleColorUpdate({ categoryId, colors });
   };
 
-  const deleteColors = (categoryId: string) => {
-    storage.repertoireSocket?.emit("repertoire:deleteColors", categoryId);
-    handleColorDelete(categoryId);
+  const deleteColors = (
+    categoryId: string,
+    colors: { [key: string]: string }
+  ) => {
+    storage.do({
+      fw: () => {
+        storage.repertoireSocket?.emit("repertoire:deleteColors", categoryId);
+        handleColorDelete(categoryId);
+      },
+      rv: () => {
+        storage.repertoireSocket?.emit("repertoire:setColors", {
+          categoryId,
+          colors,
+        });
+        handleColorUpdate({ categoryId, colors });
+      },
+    });
   };
 
   const getStringCategoryGradient = (category: category) => {
@@ -303,7 +337,7 @@ export default function EditRepertoire() {
                 {!!colors && (
                   <Button
                     onClick={() => {
-                      deleteColors(id);
+                      deleteColors(id, colors);
                     }}
                     variant={"secondary"}
                     className="hover:bg-red-600/80 border"
@@ -340,6 +374,7 @@ export default function EditRepertoire() {
   return (
     <div className="min-h-screen w-screen bg-gray-950 relative">
       <Header
+        showUndoRedo
         backButton={
           <Link to="/" className="pr-4">
             <ArrowLeft size={30} />
