@@ -6,6 +6,7 @@ import {
   FileDown,
   Import,
   Pen,
+  PencilOff,
   Trash2,
   X,
 } from "lucide-react";
@@ -70,6 +71,9 @@ export default function EditSetlist() {
   const [breakBuf, setBreakBuf] = useState<number>(5);
   const [exportDialogOpen, setExportDialogOpen] = useState<boolean>(false);
   const [draggingId, setDraggingId] = useState<string | undefined>(undefined);
+  const [draggingSpot, setDraggingSpot] = useState<setSpot | undefined>(
+    undefined
+  );
   const [draggingFrom, setDraggingFrom] = useState<string | undefined>(
     undefined
   );
@@ -119,10 +123,36 @@ export default function EditSetlist() {
     }));
   };
 
+  const handleSetPopulate = (setIndex: number, set: setSpot[]) => {
+    console.log("setPopulate");
+    setSetlist((setlist) => ({
+      ...setlist!,
+      setSpots: [
+        ...setlist!.setSpots.map((s) => {
+          if (s.set >= setIndex) {
+            return {
+              ...s,
+              set: s.set + 1,
+            };
+          }
+          return s;
+        }),
+        ...set,
+      ],
+    }));
+  };
+
   const handleEncoreDelete = () => {
     setSetlist((setlist) => ({
       ...setlist!,
       setSpots: setlist!.setSpots.filter((s) => s.set >= 0),
+    }));
+  };
+
+  const handleEncorePopulate = (encore: setSpot[]) => {
+    setSetlist((setlist) => ({
+      ...setlist!,
+      setSpots: [...setlist!.setSpots.filter((s) => s.set >= 0), ...encore],
     }));
   };
 
@@ -166,6 +196,7 @@ export default function EditSetlist() {
         return;
       }
       refetchUserData();
+      storage.getSetlistSocket(id)?.offAny();
       storage.getSetlistSocket(id)?.on("setlist:updateName", handleNameUpdate);
       storage.getSetlistSocket(id)?.on("setlist:createSpot", handleSpotCreate);
       storage.getSetlistSocket(id)?.on("setlist:updateSpot", handleSpotUpdate);
@@ -173,7 +204,13 @@ export default function EditSetlist() {
       storage.getSetlistSocket(id)?.on("setlist:deleteSet", handleSetDelete);
       storage
         .getSetlistSocket(id)
+        ?.on("setlist:populateSet", handleSetPopulate);
+      storage
+        .getSetlistSocket(id)
         ?.on("setlist:deleteEncore", handleEncoreDelete);
+      storage
+        .getSetlistSocket(id)
+        ?.on("setlist:populateEncore", handleEncorePopulate);
       storage.getSetlistSocket(id)?.on("setlist:timeUpdate", handleTimeUpdate);
       storage.getSetlistSocket(id)?.on("setlist", refetchUserData);
     });
@@ -183,7 +220,13 @@ export default function EditSetlist() {
       storage.getSetlistSocket(id)?.off("setlist:timeUpdate", handleTimeUpdate);
       storage
         .getSetlistSocket(id)
+        ?.off("setlist:populateEncore", handleEncorePopulate);
+      storage
+        .getSetlistSocket(id)
         ?.off("setlist:deleteEncore", handleEncoreDelete);
+      storage
+        .getSetlistSocket(id)
+        ?.off("setlist:populateSet", handleSetPopulate);
       storage.getSetlistSocket(id)?.off("setlist:deleteSet", handleSetDelete);
       storage.getSetlistSocket(id)?.off("setlist:removeSpot", handleSpotRemove);
       storage.getSetlistSocket(id)?.off("setlist:updateSpot", handleSpotUpdate);
@@ -227,36 +270,93 @@ export default function EditSetlist() {
   }, [fixedTime, startTime, endTime, breakBuf, breakLen, setlist?.setSpots]);
 
   const finishEditingName = () => {
-    storage.getSetlistSocket(id!)?.emit("setlist:updateName", name);
-    // storage.socket?.emit("frontPage");
-    handleNameUpdate(name);
+    storage.do({
+      fw: () => {
+        storage.getSetlistSocket(id!)?.emit("setlist:updateName", name);
+        handleNameUpdate(name);
+      },
+      rv: () => {
+        storage
+          .getSetlistSocket(id!)
+          ?.emit("setlist:updateName", setlist!.name);
+        handleNameUpdate(setlist!.name);
+      },
+    });
     setName("");
     setEditingName(false);
   };
 
   const createSpot = (newSpot: setSpot) => {
-    storage.getSetlistSocket(id!)?.emit("setlist:createSpot", newSpot);
-    handleSpotCreate(newSpot);
+    storage.do({
+      fw: () => {
+        storage.getSetlistSocket(id!)?.emit("setlist:createSpot", newSpot);
+        handleSpotCreate(newSpot);
+      },
+      rv: () => {
+        storage
+          .getSetlistSocket(id!)
+          ?.emit("setlist:removeSpot", newSpot.songId);
+        handleSpotRemove(newSpot.songId);
+      },
+    });
   };
 
-  const updateSpot = (newSpot: setSpot) => {
-    storage.getSetlistSocket(id!)?.emit("setlist:updateSpot", newSpot);
-    handleSpotUpdate(newSpot);
+  const updateSpot = (newSpot: setSpot, oldSpot: setSpot) => {
+    storage.do({
+      fw: () => {
+        storage.getSetlistSocket(id!)?.emit("setlist:updateSpot", newSpot);
+        handleSpotUpdate(newSpot);
+      },
+      rv: () => {
+        storage.getSetlistSocket(id!)?.emit("setlist:updateSpot", oldSpot);
+        handleSpotUpdate(oldSpot);
+      },
+    });
   };
 
-  const removeSpot = (songId: string) => {
-    storage.getSetlistSocket(id!)?.emit("setlist:removeSpot", songId);
-    handleSpotRemove(songId);
+  const removeSpot = (spot: setSpot) => {
+    storage.do({
+      fw: () => {
+        storage.getSetlistSocket(id!)?.emit("setlist:removeSpot", spot.songId);
+        handleSpotRemove(spot.songId);
+      },
+      rv: () => {
+        storage.getSetlistSocket(id!)?.emit("setlist:createSpot", spot);
+        handleSpotCreate(spot);
+      },
+    });
   };
 
   const deleteSet = (setIndex: number) => {
-    storage.getSetlistSocket(id!)?.emit("setlist:deleteSet", setIndex);
-    handleSetDelete(setIndex);
+    const oldSet = getPartitionedSets(setlist!.setSpots)[setIndex];
+    storage.do({
+      fw: () => {
+        storage.getSetlistSocket(id!)?.emit("setlist:deleteSet", setIndex);
+        handleSetDelete(setIndex);
+      },
+      rv: () => {
+        storage
+          .getSetlistSocket(id!)
+          ?.emit("setlist:populateSet", setIndex, oldSet);
+        handleSetPopulate(setIndex, oldSet);
+      },
+    });
   };
 
   const deleteEncore = () => {
-    storage.getSetlistSocket(id!)?.emit("setlist:deleteEncore");
-    handleEncoreDelete();
+    const oldEncore = getEncore(setlist!.setSpots);
+    storage.do({
+      fw: () => {
+        storage.getSetlistSocket(id!)?.emit("setlist:deleteEncore");
+        handleEncoreDelete();
+      },
+      rv: () => {
+        storage
+          .getSetlistSocket(id!)
+          ?.emit("setlist:populateEncore", oldEncore);
+        handleEncorePopulate(oldEncore);
+      },
+    });
   };
 
   const finishEditingTimes = () => {
@@ -267,8 +367,22 @@ export default function EditSetlist() {
       fixedTime: fixedTime!,
       time: fixedTime! === "START" ? startTime : endTime,
     };
-    storage.getSetlistSocket(id!)?.emit("setlist:timeUpdate", dto);
-    handleTimeUpdate(dto);
+    const oldState: setlistTimeDTO = {
+      breakBuffer: setlist!.breakBuffer,
+      breakLen: setlist!.breakLen,
+      fixedTime: setlist!.fixedTime,
+      time: setlist!.time,
+    };
+    storage.do({
+      fw: () => {
+        storage.getSetlistSocket(id!)?.emit("setlist:timeUpdate", dto);
+        handleTimeUpdate(dto);
+      },
+      rv: () => {
+        storage.getSetlistSocket(id!)?.emit("setlist:timeUpdate", oldState);
+        handleTimeUpdate(oldState);
+      },
+    });
   };
 
   const abortEditingTimes = () => {
@@ -289,6 +403,7 @@ export default function EditSetlist() {
     (e: DragEvent<HTMLTableRowElement>) => {
       setDraggingFrom(from);
       setDraggingId(songId);
+      setDraggingSpot(setlist?.setSpots.find((s) => s.songId === songId)); // for undo
 
       e.dataTransfer.setData("pain/text", "dummy"); // required for safari
     };
@@ -395,6 +510,7 @@ export default function EditSetlist() {
     );
     setDraggingFrom(undefined);
     setDraggingId(undefined);
+    setDraggingSpot(undefined);
     setNewSetSongId(undefined);
 
     if (draggingFrom === "repertoire" && to === "repertoire") {
@@ -410,10 +526,10 @@ export default function EditSetlist() {
     }
 
     if (to === "repertoire") {
-      removeSpot(draggingId!);
+      removeSpot(draggingSpot!);
       return;
     }
-    updateSpot({ ...newSpot!, dummy: undefined });
+    updateSpot({ ...newSpot!, dummy: undefined }, draggingSpot!);
   };
 
   const dragOverNew = (e: DragEvent<any>) => {
@@ -433,6 +549,7 @@ export default function EditSetlist() {
     e.stopPropagation();
     setDraggingFrom(undefined);
     setDraggingId(undefined);
+    setDraggingSpot(undefined);
     setNewSetSongId(undefined);
     const newSpot = {
       set: getPartitionedSets(setlist!.setSpots).length,
@@ -443,7 +560,7 @@ export default function EditSetlist() {
     if (draggingFrom === "repertoire") {
       createSpot(newSpot);
     } else {
-      updateSpot(newSpot);
+      updateSpot(newSpot, draggingSpot!);
     }
   };
 
@@ -704,7 +821,7 @@ export default function EditSetlist() {
   );
 
   const setlistBank = () => (
-    <ResizablePanel defaultSize={"70%"}>
+    <ResizablePanel defaultSize={"65%"}>
       <div className="p-4 px-5 lg:px-30 h-full w-screen overflow-scroll">
         <div className="w-fit flex flex-col gap-6">
           <h1 className="text-2xl font-bold flex flex-row gap-2 items-center">
@@ -756,7 +873,7 @@ export default function EditSetlist() {
                   variant={"secondary"}
                   onClick={abortEditingTimes}
                 >
-                  <X />
+                  <PencilOff />
                 </Button>
                 <Button className="border" onClick={finishEditingTimes}>
                   <Check />
@@ -790,11 +907,9 @@ export default function EditSetlist() {
                   "0m"
                 )}
               </div>
-            </div>
-            <div className="grid grid-cols-4 w-fit gap-2">
-              <span className="w-fit flex flex-row items-center">Start:</span>
+              <div className="w-fit flex flex-row items-center">Start:</div>
               <Input
-                className="w-50 col-span-3"
+                className="w-40"
                 type="time"
                 value={startTime}
                 onChange={(e) => {
@@ -803,9 +918,9 @@ export default function EditSetlist() {
                 }}
                 disabled={!editingTimes}
               />
-              <span className="w-fit flex flex-row items-center">End:</span>
+              <div className="w-fit flex flex-row items-center">End:</div>
               <Input
-                className="w-50 col-span-3"
+                className="w-40"
                 type="time"
                 value={endTime}
                 onChange={(e) => {
@@ -814,11 +929,11 @@ export default function EditSetlist() {
                 }}
                 disabled={!editingTimes}
               />
-              <span className="w-fit flex flex-row items-center">
-                Break length:
-              </span>
+              <div className="w-fit flex flex-row items-center">
+                Break length (minutes):
+              </div>
               <Input
-                className="w-50 col-span-3"
+                className="w-40"
                 type="number"
                 min={0}
                 value={breakLen}
@@ -827,11 +942,11 @@ export default function EditSetlist() {
                 }}
                 disabled={!editingTimes}
               />
-              <span className="w-fit flex flex-row items-center">
-                Break buffer:
-              </span>
+              <div className="w-fit flex flex-row items-center">
+                Set buffer (minutes):
+              </div>
               <Input
-                className="w-50 col-span-3"
+                className="w-40"
                 type="number"
                 min={0}
                 value={breakBuf}
@@ -843,7 +958,6 @@ export default function EditSetlist() {
             </div>
             <span>
               Breaks after each set (except last), with a buffer for each set.
-              All numbers are minutes.
             </span>
           </div>
           <h1 className="font-bold text-2xl">Your Custom Categories:</h1>
@@ -896,6 +1010,7 @@ export default function EditSetlist() {
   return (
     <div className="h-screen flex flex-col w-screen bg-gray-950">
       <Header
+        showUndoRedo
         backButton={
           <Link to="/" className="pr-4">
             <ArrowLeft size={30} />

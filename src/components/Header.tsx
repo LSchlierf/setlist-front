@@ -12,6 +12,17 @@ export type HeaderProps = {
   onLogin: (loggedIn: boolean) => void;
 };
 
+const onKeyDown = (e: KeyboardEvent) => {
+  if (e.ctrlKey && e.key === "z") {
+    storage.undo();
+    return;
+  }
+  if (e.ctrlKey && e.key === "y") {
+    storage.redo();
+    return;
+  }
+};
+
 export default function Header({
   backButton,
   showUndoRedo,
@@ -29,7 +40,10 @@ export default function Header({
     storage.registerUndoCallback(undoCallback);
     storage.registerRedoCallback(redoCallback);
 
+    window.addEventListener("keydown", onKeyDown);
+
     return () => {
+      window.removeEventListener("keydown", onKeyDown);
       storage.removeUndoCallback(undoCallback);
       storage.removeRedoCallback(redoCallback);
     };
