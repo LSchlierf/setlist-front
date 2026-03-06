@@ -1,4 +1,6 @@
-import type { setSpot } from "@/types";
+import { getNumberCategoryGradient } from "@/components/CategoryColorCard";
+import { Button } from "@/components/ui/button";
+import type { category, setSpot } from "@/types";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 
@@ -34,22 +36,14 @@ export function hexStringToRGB(color: string) {
   };
 }
 
-export function RGBToHexString({
-  r,
-  g,
-  b,
-}: {
-  r: number;
-  g: number;
-  b: number;
-}) {
+export function RGBToHexString({ r, g, b }: { r: number; g: number; b: number }) {
   const rHex = `00${Math.round(r).toString(16)}`;
   const gHex = `00${Math.round(g).toString(16)}`;
   const bHex = `00${Math.round(b).toString(16)}`;
 
-  return `#${rHex.substring(rHex.length - 2)}${gHex.substring(
-    gHex.length - 2
-  )}${bHex.substring(bHex.length - 2)}`;
+  return `#${rHex.substring(rHex.length - 2)}${gHex.substring(gHex.length - 2)}${bHex.substring(
+    bHex.length - 2
+  )}`;
 }
 
 export function RGBToHSL({ r, g, b }: { r: number; g: number; b: number }) {
@@ -101,6 +95,41 @@ export function HSLToRGB({ h, s, l }: { h: number; s: number; l: number }) {
     g: Math.round(g * 255),
     b: Math.round(b * 255),
   };
+}
+
+function getStringCategoryGradient(category: category) {
+  let gradient = "conic-gradient(from 0.75turn";
+
+  category.valueRange.forEach((val, index) => {
+    const ratio = index / category.valueRange.length;
+    const nextRatio = (index + 1) / category.valueRange.length;
+
+    gradient += `, ${category.colors![val.toString()]} ${Math.round(ratio * 100)}%, ${
+      category.colors![val.toString()]
+    } ${Math.round(nextRatio * 100)}%`;
+  });
+
+  return gradient + ")";
+}
+
+export function ColorsGradient(category: category) {
+  let gradient = "";
+
+  switch (category.type) {
+    case "booleanCategory":
+      gradient = `linear-gradient(to right, ${category.colors!["true"]} 0%, ${
+        category.colors!["true"]
+      } 50%, ${category.colors!["false"]} 50%, ${category.colors!["false"]} 100%)`;
+      break;
+    case "numberCategory":
+      gradient = getNumberCategoryGradient(category, undefined, "to right");
+      break;
+    case "stringCategory":
+      gradient = getStringCategoryGradient(category);
+      break;
+  }
+
+  return <Button className="hover:cursor-default!" style={{ background: gradient }}></Button>;
 }
 
 export function getPartitionedSets(setSpots: setSpot[]) {

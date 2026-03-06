@@ -10,28 +10,18 @@ import RepertoireImportExportCard from "./components/RepertoireImportExportCard"
 import { Card, CardContent } from "./components/ui/card";
 import { categoryTypeLabels, type category } from "./types";
 import NewCategoryCard from "./components/NewCategoryCard";
-import CategoryColorCard, {
-  getNumberCategoryGradient,
-} from "./components/CategoryColorCard";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "./components/ui/tooltip";
+import CategoryColorCard from "./components/CategoryColorCard";
+import { Tooltip, TooltipContent, TooltipTrigger } from "./components/ui/tooltip";
 import RepertoireTable from "./components/RepertoireTable";
+import { ColorsGradient } from "./lib/utils";
 
 export default function EditRepertoire() {
   const navigate = useNavigate();
 
-  const [categories, setCategories] = useState<undefined | category[]>(
-    undefined
-  );
+  const [categories, setCategories] = useState<undefined | category[]>(undefined);
   const [dialogOpen, setDialogOpen] = useState<boolean>(false);
-  const [newCategoryDialogOpen, setNewCategoryDialogOpen] =
-    useState<boolean>(false);
-  const [colorCategory, setColorCategory] = useState<category | undefined>(
-    undefined
-  );
+  const [newCategoryDialogOpen, setNewCategoryDialogOpen] = useState<boolean>(false);
+  const [colorCategory, setColorCategory] = useState<category | undefined>(undefined);
 
   const backToMainPage = () => {
     navigate("/");
@@ -58,9 +48,7 @@ export default function EditRepertoire() {
   };
 
   const handleCategoryDelete = (categoryId: string) => {
-    setCategories((categories) =>
-      categories?.filter((c) => c.id !== categoryId)
-    );
+    setCategories((categories) => categories?.filter((c) => c.id !== categoryId));
   };
 
   const handleColorUpdate = ({
@@ -98,45 +86,21 @@ export default function EditRepertoire() {
       if (!v) backToMainPage();
       refetchUserData();
       storage.repertoireSocket?.on("repertoire", refetchUserData);
-      storage.repertoireSocket?.on(
-        "repertoire:addCategory",
-        handleCategoryCreate
-      );
-      storage.repertoireSocket?.on(
-        "repertoire:updateCategory",
-        handleCategoryUpdate
-      );
-      storage.repertoireSocket?.on(
-        "repertoire:deleteCategory",
-        handleCategoryDelete
-      );
+      storage.repertoireSocket?.on("repertoire:addCategory", handleCategoryCreate);
+      storage.repertoireSocket?.on("repertoire:updateCategory", handleCategoryUpdate);
+      storage.repertoireSocket?.on("repertoire:deleteCategory", handleCategoryDelete);
       storage.repertoireSocket?.on("repertoire:setColors", handleColorUpdate);
-      storage.repertoireSocket?.on(
-        "repertoire:deleteColors",
-        handleColorDelete
-      );
+      storage.repertoireSocket?.on("repertoire:deleteColors", handleColorDelete);
     });
 
     document.title = "Repertoire - SongRack";
 
     return () => {
-      storage.repertoireSocket?.off(
-        "repertoire:deleteColors",
-        handleColorDelete
-      );
+      storage.repertoireSocket?.off("repertoire:deleteColors", handleColorDelete);
       storage.repertoireSocket?.off("repertoire:setColors", handleColorUpdate);
-      storage.repertoireSocket?.off(
-        "repertoire:deleteCategory",
-        handleCategoryDelete
-      );
-      storage.repertoireSocket?.off(
-        "repertoire:updateCategory",
-        handleCategoryUpdate
-      );
-      storage.repertoireSocket?.off(
-        "repertoire:addCategory",
-        handleCategoryCreate
-      );
+      storage.repertoireSocket?.off("repertoire:deleteCategory", handleCategoryDelete);
+      storage.repertoireSocket?.off("repertoire:updateCategory", handleCategoryUpdate);
+      storage.repertoireSocket?.off("repertoire:addCategory", handleCategoryCreate);
       storage.repertoireSocket?.off("repertoire", refetchUserData);
       storage.clearHistory();
     };
@@ -149,10 +113,7 @@ export default function EditRepertoire() {
         handleCategoryCreate(newCategory);
       },
       rv: () => {
-        storage.repertoireSocket?.emit(
-          "repertoire:deleteCategory",
-          newCategory.id
-        );
+        storage.repertoireSocket?.emit("repertoire:deleteCategory", newCategory.id);
         handleCategoryDelete(newCategory.id);
       },
     });
@@ -165,10 +126,7 @@ export default function EditRepertoire() {
         handleCategoryUpdate(category);
       },
       rv: () => {
-        storage.repertoireSocket?.emit(
-          "repertoire:updateCategory",
-          oldCategory
-        );
+        storage.repertoireSocket?.emit("repertoire:updateCategory", oldCategory);
         handleCategoryUpdate(oldCategory);
       },
     });
@@ -177,10 +135,7 @@ export default function EditRepertoire() {
   const deleteCategory = (category: category) => {
     storage.do({
       fw: () => {
-        storage.repertoireSocket?.emit(
-          "repertoire:deleteCategory",
-          category.id
-        );
+        storage.repertoireSocket?.emit("repertoire:deleteCategory", category.id);
         handleCategoryDelete(category.id);
       },
       rv: () => {
@@ -218,10 +173,7 @@ export default function EditRepertoire() {
     });
   };
 
-  const deleteColors = (
-    categoryId: string,
-    colors: { [key: string]: string }
-  ) => {
+  const deleteColors = (categoryId: string, colors: { [key: string]: string }) => {
     storage.do({
       fw: () => {
         storage.repertoireSocket?.emit("repertoire:deleteColors", categoryId);
@@ -235,48 +187,6 @@ export default function EditRepertoire() {
         handleColorUpdate({ categoryId, colors });
       },
     });
-  };
-
-  const getStringCategoryGradient = (category: category) => {
-    let gradient = "conic-gradient(from 0.75turn";
-
-    category.valueRange.forEach((val, index) => {
-      const ratio = index / category.valueRange.length;
-      const nextRatio = (index + 1) / category.valueRange.length;
-
-      gradient += `, ${category.colors![val.toString()]} ${Math.round(
-        ratio * 100
-      )}%, ${category.colors![val.toString()]} ${Math.round(nextRatio * 100)}%`;
-    });
-
-    return gradient + ")";
-  };
-
-  const ColorsGradient = (category: category) => {
-    let gradient = "";
-
-    switch (category.type) {
-      case "booleanCategory":
-        gradient = `linear-gradient(to right, ${category.colors!["true"]} 0%, ${
-          category.colors!["true"]
-        } 50%, ${category.colors!["false"]} 50%, ${
-          category.colors!["false"]
-        } 100%)`;
-        break;
-      case "numberCategory":
-        gradient = getNumberCategoryGradient(category, undefined, "to right");
-        break;
-      case "stringCategory":
-        gradient = getStringCategoryGradient(category);
-        break;
-    }
-
-    return (
-      <Button
-        className="hover:cursor-default!"
-        style={{ background: gradient }}
-      ></Button>
-    );
   };
 
   const CategoryCard = (category: category) => {
@@ -311,17 +221,12 @@ export default function EditRepertoire() {
                 {!!colors && ColorsGradient(category)}
                 {type === "multipleStringCategory" ? (
                   <Tooltip>
-                    <TooltipTrigger
-                      asChild
-                      className="disabled:pointer-events-auto"
-                    >
+                    <TooltipTrigger asChild className="disabled:pointer-events-auto">
                       <Button variant={"secondary"} disabled>
                         <Palette />
                       </Button>
                     </TooltipTrigger>
-                    <TooltipContent>
-                      Colors currently aren't supported for this cateogry type.
-                    </TooltipContent>
+                    <TooltipContent>Colors currently aren't supported for this cateogry type.</TooltipContent>
                   </Tooltip>
                 ) : (
                   <Button
@@ -407,10 +312,7 @@ export default function EditRepertoire() {
         />
       )}
       {newCategoryDialogOpen && (
-        <NewCategoryCard
-          onClose={() => setNewCategoryDialogOpen(false)}
-          onFinish={addCategory}
-        />
+        <NewCategoryCard onClose={() => setNewCategoryDialogOpen(false)} onFinish={addCategory} />
       )}
       {!!colorCategory && (
         <CategoryColorCard

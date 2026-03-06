@@ -1,62 +1,27 @@
 import { Link, useNavigate, useParams } from "react-router";
 import Header from "./components/Header";
-import {
-  ArrowLeft,
-  Check,
-  FileDown,
-  Import,
-  Pen,
-  PencilOff,
-  Trash2,
-  X,
-} from "lucide-react";
+import { ArrowLeft, Check, FileDown, Import, Pen, PencilOff, Trash2, X } from "lucide-react";
 import { useEffect, useState, type DragEvent } from "react";
 import storage from "./lib/storage";
-import {
-  type category,
-  type setlist,
-  type setlistTimeDTO,
-  type setSpot,
-  type song,
-} from "./types";
+import { type category, type setlist, type setlistTimeDTO, type setSpot, type song } from "./types";
 import RepertoireTable from "./components/RepertoireTable";
 import { Input } from "./components/ui/input";
 import { ButtonGroup } from "./components/ui/button-group";
 import { Button } from "./components/ui/button";
-import {
-  ResizableHandle,
-  ResizablePanel,
-  ResizablePanelGroup,
-} from "./components/ui/resizable";
-import {
-  Card,
-  CardAction,
-  CardContent,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "./components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "./components/ui/table";
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "./components/ui/resizable";
+import { Card, CardAction, CardContent, CardFooter, CardHeader, CardTitle } from "./components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./components/ui/table";
 import DurationInput from "./components/DurationInput";
 import { Checkbox } from "./components/ui/checkbox";
 import SetlistExportCard from "./components/SetlistExportCard";
-import { getEncore, getPartitionedSets } from "./lib/utils";
+import { ColorsGradient, getEncore, getPartitionedSets } from "./lib/utils";
 
 export default function EditSetlist() {
   const { id } = useParams();
   const navigate = useNavigate();
 
   const [setlist, setSetlist] = useState<setlist | undefined>();
-  const [categories, setCategories] = useState<category[] | undefined>(
-    undefined
-  );
+  const [categories, setCategories] = useState<category[] | undefined>(undefined);
   const [songs, setSongs] = useState<Map<string, song> | undefined>(undefined);
   const [filter, setFilter] = useState<string>("");
   const [editingName, setEditingName] = useState<boolean>(false);
@@ -64,22 +29,14 @@ export default function EditSetlist() {
   const [name, setName] = useState<string>("");
   const [startTime, setStartTime] = useState<string>("19:00");
   const [endTime, setEndTime] = useState<string>("19:00");
-  const [fixedTime, setFixedTime] = useState<"START" | "END" | undefined>(
-    undefined
-  );
+  const [fixedTime, setFixedTime] = useState<"START" | "END" | undefined>(undefined);
   const [breakLen, setBreakLen] = useState<number>(20);
   const [breakBuf, setBreakBuf] = useState<number>(5);
   const [exportDialogOpen, setExportDialogOpen] = useState<boolean>(false);
   const [draggingId, setDraggingId] = useState<string | undefined>(undefined);
-  const [draggingSpot, setDraggingSpot] = useState<setSpot | undefined>(
-    undefined
-  );
-  const [draggingFrom, setDraggingFrom] = useState<string | undefined>(
-    undefined
-  );
-  const [newSetSongId, setNewSetSongId] = useState<string | undefined>(
-    undefined
-  );
+  const [draggingSpot, setDraggingSpot] = useState<setSpot | undefined>(undefined);
+  const [draggingFrom, setDraggingFrom] = useState<string | undefined>(undefined);
+  const [newSetSongId, setNewSetSongId] = useState<string | undefined>(undefined);
 
   const backToMainPage = () => {
     navigate("/");
@@ -95,10 +52,7 @@ export default function EditSetlist() {
   const handleSpotCreate = (newSpot: setSpot) => {
     setSetlist((setlist) => ({
       ...setlist!,
-      setSpots: [
-        ...setlist!.setSpots.filter((s) => s.songId !== newSpot.songId),
-        newSpot,
-      ],
+      setSpots: [...setlist!.setSpots.filter((s) => s.songId !== newSpot.songId), newSpot],
     }));
   };
 
@@ -166,6 +120,16 @@ export default function EditSetlist() {
     );
   };
 
+  const handleCategoryVisibilityUpdate = (categoryId: string, visible: boolean) => {
+    setSetlist((setlist) => ({
+      ...setlist!,
+      categoryVisibilities: [
+        ...setlist!.categoryVisibilities.filter((v) => v.categoryId !== categoryId),
+        { categoryId, visible },
+      ],
+    }));
+  };
+
   const refetchUserData = () => {
     storage.getCategories().then(setCategories);
     storage.getSongs().then((songs: song[]) => {
@@ -202,31 +166,21 @@ export default function EditSetlist() {
       storage.getSetlistSocket(id)?.on("setlist:updateSpot", handleSpotUpdate);
       storage.getSetlistSocket(id)?.on("setlist:removeSpot", handleSpotRemove);
       storage.getSetlistSocket(id)?.on("setlist:deleteSet", handleSetDelete);
-      storage
-        .getSetlistSocket(id)
-        ?.on("setlist:populateSet", handleSetPopulate);
-      storage
-        .getSetlistSocket(id)
-        ?.on("setlist:deleteEncore", handleEncoreDelete);
-      storage
-        .getSetlistSocket(id)
-        ?.on("setlist:populateEncore", handleEncorePopulate);
+      storage.getSetlistSocket(id)?.on("setlist:populateSet", handleSetPopulate);
+      storage.getSetlistSocket(id)?.on("setlist:deleteEncore", handleEncoreDelete);
+      storage.getSetlistSocket(id)?.on("setlist:populateEncore", handleEncorePopulate);
       storage.getSetlistSocket(id)?.on("setlist:timeUpdate", handleTimeUpdate);
+      storage.getSetlistSocket(id)?.on("setlist:categoryVisibility", handleCategoryVisibilityUpdate);
       storage.getSetlistSocket(id)?.on("setlist", refetchUserData);
     });
 
     return () => {
       storage.getSetlistSocket(id)?.off("setlist", refetchUserData);
+      storage.getSetlistSocket(id)?.off("setlist:categoryVisibility", handleCategoryVisibilityUpdate);
       storage.getSetlistSocket(id)?.off("setlist:timeUpdate", handleTimeUpdate);
-      storage
-        .getSetlistSocket(id)
-        ?.off("setlist:populateEncore", handleEncorePopulate);
-      storage
-        .getSetlistSocket(id)
-        ?.off("setlist:deleteEncore", handleEncoreDelete);
-      storage
-        .getSetlistSocket(id)
-        ?.off("setlist:populateSet", handleSetPopulate);
+      storage.getSetlistSocket(id)?.off("setlist:populateEncore", handleEncorePopulate);
+      storage.getSetlistSocket(id)?.off("setlist:deleteEncore", handleEncoreDelete);
+      storage.getSetlistSocket(id)?.off("setlist:populateSet", handleSetPopulate);
       storage.getSetlistSocket(id)?.off("setlist:deleteSet", handleSetDelete);
       storage.getSetlistSocket(id)?.off("setlist:removeSpot", handleSpotRemove);
       storage.getSetlistSocket(id)?.off("setlist:updateSpot", handleSpotUpdate);
@@ -252,13 +206,7 @@ export default function EditSetlist() {
     }
     setBreakBuf(setlist.breakBuffer);
     setBreakLen(setlist.breakLen);
-  }, [
-    setlist?.setSpots,
-    setlist?.fixedTime,
-    setlist?.time,
-    setlist?.breakBuffer,
-    setlist?.breakLen,
-  ]);
+  }, [setlist?.setSpots, setlist?.fixedTime, setlist?.time, setlist?.breakBuffer, setlist?.breakLen]);
 
   useEffect(() => {
     if (setlist === undefined || songs === undefined) return;
@@ -276,9 +224,7 @@ export default function EditSetlist() {
         handleNameUpdate(name);
       },
       rv: () => {
-        storage
-          .getSetlistSocket(id!)
-          ?.emit("setlist:updateName", setlist!.name);
+        storage.getSetlistSocket(id!)?.emit("setlist:updateName", setlist!.name);
         handleNameUpdate(setlist!.name);
       },
     });
@@ -293,9 +239,7 @@ export default function EditSetlist() {
         handleSpotCreate(newSpot);
       },
       rv: () => {
-        storage
-          .getSetlistSocket(id!)
-          ?.emit("setlist:removeSpot", newSpot.songId);
+        storage.getSetlistSocket(id!)?.emit("setlist:removeSpot", newSpot.songId);
         handleSpotRemove(newSpot.songId);
       },
     });
@@ -335,9 +279,7 @@ export default function EditSetlist() {
         handleSetDelete(setIndex);
       },
       rv: () => {
-        storage
-          .getSetlistSocket(id!)
-          ?.emit("setlist:populateSet", setIndex, oldSet);
+        storage.getSetlistSocket(id!)?.emit("setlist:populateSet", setIndex, oldSet);
         handleSetPopulate(setIndex, oldSet);
       },
     });
@@ -351,9 +293,7 @@ export default function EditSetlist() {
         handleEncoreDelete();
       },
       rv: () => {
-        storage
-          .getSetlistSocket(id!)
-          ?.emit("setlist:populateEncore", oldEncore);
+        storage.getSetlistSocket(id!)?.emit("setlist:populateEncore", oldEncore);
         handleEncorePopulate(oldEncore);
       },
     });
@@ -397,16 +337,26 @@ export default function EditSetlist() {
     setEditingTimes(false);
   };
 
-  const startDragging =
-    (from: string) =>
-    (songId: string) =>
-    (e: DragEvent<HTMLTableRowElement>) => {
-      setDraggingFrom(from);
-      setDraggingId(songId);
-      setDraggingSpot(setlist?.setSpots.find((s) => s.songId === songId)); // for undo
+  const updateCategoryVisibility = (categoryId: string, visible: boolean) => {
+    storage.do({
+      fw: () => {
+        storage.getSetlistSocket(id!)?.emit("setlist:categoryVisibility", categoryId, visible);
+        handleCategoryVisibilityUpdate(categoryId, visible);
+      },
+      rv: () => {
+        storage.getSetlistSocket(id!)?.emit("setlist:categoryVisibility", categoryId, !visible);
+        handleCategoryVisibilityUpdate(categoryId, !visible);
+      },
+    });
+  };
 
-      e.dataTransfer.setData("pain/text", "dummy"); // required for safari
-    };
+  const startDragging = (from: string) => (songId: string) => (e: DragEvent<HTMLTableRowElement>) => {
+    setDraggingFrom(from);
+    setDraggingId(songId);
+    setDraggingSpot(setlist?.setSpots.find((s) => s.songId === songId)); // for undo
+
+    e.dataTransfer.setData("pain/text", "dummy"); // required for safari
+  };
 
   const dragOver = (to: string) => (e: DragEvent<any>) => {
     e.preventDefault();
@@ -446,16 +396,12 @@ export default function EditSetlist() {
 
     if (newSetIndex < 0) {
       newPrio = findPrio(
-        newEncore
-          .sort((a, b) => a.spotPrio - b.spotPrio)
-          .filter((s) => !s.dummy),
+        newEncore.sort((a, b) => a.spotPrio - b.spotPrio).filter((s) => !s.dummy),
         newIndex
       );
     } else {
       newPrio = findPrio(
-        newSets[newSetIndex]
-          .sort((a, b) => a.spotPrio - b.spotPrio)
-          .filter((s) => !s.dummy),
+        newSets[newSetIndex].sort((a, b) => a.spotPrio - b.spotPrio).filter((s) => !s.dummy),
         newIndex
       );
     }
@@ -471,12 +417,7 @@ export default function EditSetlist() {
       (setlist) =>
         setlist && {
           ...setlist,
-          setSpots: [
-            ...setlist?.setSpots.filter(
-              (s) => !s.dummy && s.songId !== draggingId
-            ),
-            dummySpot,
-          ],
+          setSpots: [...setlist?.setSpots.filter((s) => !s.dummy && s.songId !== draggingId), dummySpot],
         }
     );
   };
@@ -564,87 +505,59 @@ export default function EditSetlist() {
     }
   };
 
-  const concertDurationMinutes = (
-    setSpots: setSpot[],
-    songMap: Map<string, song>
-  ) => {
+  const concertDurationMinutes = (setSpots: setSpot[], songMap: Map<string, song>) => {
     const sets = getPartitionedSets(setSpots);
-    const breaks =
-      sets.length * breakBuf + Math.max(sets.length - 1, 0) * breakLen;
+    const breaks = sets.length * breakBuf + Math.max(sets.length - 1, 0) * breakLen;
     const setLengths = [...sets, getEncore(setSpots)].map(
       (set) =>
-        Math.ceil(
-          (set?.reduce((a, s) => a + (songMap.get(s.songId)?.length || 0), 0) ||
-            0) /
-            60 /
-            5
-        ) * 5
+        Math.ceil((set?.reduce((a, s) => a + (songMap.get(s.songId)?.length || 0), 0) || 0) / 60 / 5) * 5
     );
     const sum = (setLengths.reduce((a, s) => a + s, 0) + breaks) * 60;
     return Math.ceil(sum / 60);
   };
 
-  const concertLengthApprox = (
-    setSpots: setSpot[],
-    songMap: Map<string, song>
-  ) => {
+  const concertLengthApprox = (setSpots: setSpot[], songMap: Map<string, song>) => {
     const sum = concertDurationMinutes(setSpots, songMap);
     return `~${Math.floor(sum / 60) % 60}h ${sum % 60}m`;
   };
 
-  const calculateEndTime = (
-    setSpots: setSpot[],
-    songMap: Map<string, song>
-  ) => {
+  const calculateEndTime = (setSpots: setSpot[], songMap: Map<string, song>) => {
     const startH = Number(startTime.split(":")[0]);
     const startM = Number(startTime.split(":")[1]);
     const minutes = concertDurationMinutes(setSpots, songMap);
     const endMinutes = (startH * 60 + startM + minutes) % 1440;
-    return (
-      ("0" + Math.floor(endMinutes / 60)).slice(-2) +
-      ":" +
-      ("0" + (endMinutes % 60)).slice(-2)
-    );
+    return ("0" + Math.floor(endMinutes / 60)).slice(-2) + ":" + ("0" + (endMinutes % 60)).slice(-2);
   };
 
-  const calculateStartTime = (
-    setSpots: setSpot[],
-    songMap: Map<string, song>
-  ) => {
+  const calculateStartTime = (setSpots: setSpot[], songMap: Map<string, song>) => {
     const endH = Number(endTime.split(":")[0]);
     const endM = Number(endTime.split(":")[1]);
     const minutes = concertDurationMinutes(setSpots, songMap);
     const startMinutes = (endH * 60 + endM - minutes + 1440) % 1440;
-    return (
-      ("0" + Math.floor(startMinutes / 60)).slice(-2) +
-      ":" +
-      ("0" + (startMinutes % 60)).slice(-2)
-    );
+    return ("0" + Math.floor(startMinutes / 60)).slice(-2) + ":" + ("0" + (startMinutes % 60)).slice(-2);
   };
 
   const categoryCard = (category: category) => {
-    const { id, title, show } = category;
+    const { id, title, show, colors } = category;
+    const visible = getCategoryVisibility(category);
     return (
       <Card key={id}>
         <CardHeader>
           <CardTitle>{title}</CardTitle>
+          <CardAction>
+            {!!colors ? (
+              ColorsGradient(category)
+            ) : (
+              <Button className="hover:bg-transparent! hover:cursor-default!" variant={"ghost"} />
+            )}
+          </CardAction>
         </CardHeader>
         <CardContent>
           <div className="flex flex-row justify-between gap-2">
             <div className="font-bold">Show:</div>
             <Checkbox
-              checked={show}
-              onCheckedChange={(checked) =>
-                setCategories((categories) =>
-                  categories?.map((c) => {
-                    if (c.id !== id) return c;
-                    return {
-                      ...c,
-                      show: !!checked,
-                    };
-                  })
-                )
-              }
+              checked={visible === undefined ? show : visible}
+              onCheckedChange={(checked) => updateCategoryVisibility(id, Boolean(checked))}
             />
           </div>
         </CardContent>
@@ -683,6 +596,13 @@ export default function EditSetlist() {
     return <TableCell>Unknown category type: {category.type}</TableCell>;
   };
 
+  const getCategoryVisibility = (category: { id: string; show: boolean }) => {
+    const visible = setlist?.categoryVisibilities.find(
+      ({ categoryId }) => categoryId === category.id
+    )?.visible;
+    return visible === undefined ? category.show : visible;
+  };
+
   const setTable = (spots: setSpot[], set: string) => {
     return (
       <Table>
@@ -691,11 +611,9 @@ export default function EditSetlist() {
             <TableHead>Song Title</TableHead>
             <TableHead>Artist</TableHead>
             <TableHead>Length</TableHead>
-            {categories
-              ?.filter((c) => c.show)
-              .map((c) => (
-                <TableHead key={c.id}>{c.title}</TableHead>
-              ))}
+            {categories?.filter(getCategoryVisibility).map((c) => (
+              <TableHead key={c.id}>{c.title}</TableHead>
+            ))}
             <TableHead>Notes</TableHead>
           </TableRow>
         </TableHeader>
@@ -713,17 +631,9 @@ export default function EditSetlist() {
                 <TableCell>{song?.title}</TableCell>
                 <TableCell>{song?.artist}</TableCell>
                 <TableCell>
-                  {
-                    <DurationInput
-                      editing={false}
-                      value={song.length}
-                      onChange={() => {}}
-                    />
-                  }
+                  {<DurationInput editing={false} value={song.length} onChange={() => {}} />}
                 </TableCell>
-                {categories
-                  ?.filter((c) => c.show)
-                  .map((c) => propertyDisplay(song, c))}
+                {categories?.filter(getCategoryVisibility).map((c) => propertyDisplay(song, c))}
                 <TableCell>{song?.notes}</TableCell>
               </TableRow>
             );
@@ -734,22 +644,12 @@ export default function EditSetlist() {
   };
 
   const setLength = (set: setSpot[] | undefined) => {
-    const sum =
-      set?.reduce(
-        (a: number, s) => a + (songs?.get(s?.songId)?.length || 0),
-        0
-      ) || 0;
-    return `${Math.floor(sum / 3600)}h ${Math.floor(sum / 60) % 60}m ${
-      sum % 60
-    }s`;
+    const sum = set?.reduce((a: number, s) => a + (songs?.get(s?.songId)?.length || 0), 0) || 0;
+    return `${Math.floor(sum / 3600)}h ${Math.floor(sum / 60) % 60}m ${sum % 60}s`;
   };
 
   const setLengthApprox = (set: setSpot[] | undefined) => {
-    const sum =
-      set?.reduce(
-        (a: number, s) => a + (songs?.get(s?.songId)?.length || 0),
-        0
-      ) || 0;
+    const sum = set?.reduce((a: number, s) => a + (songs?.get(s?.songId)?.length || 0), 0) || 0;
     return Math.ceil(sum / 60 / 5) * 5;
   };
 
@@ -757,19 +657,12 @@ export default function EditSetlist() {
     const setTitle = typeof index === "string" ? index : `Set ${index + 1}`;
     const setId = setTitle.split(" ").join("-");
     return (
-      <Card
-        key={`set-${setTitle}`}
-        className="w-full"
-        onDragOver={dragOver(setId)}
-        onDrop={dropSong(setId)}
-      >
+      <Card key={`set-${setTitle}`} className="w-full" onDragOver={dragOver(setId)} onDrop={dropSong(setId)}>
         <CardHeader>
           <CardTitle className="font-bold text-2xl">{setTitle}</CardTitle>
           <CardAction>
             <Button
-              onClick={() =>
-                typeof index === "number" ? deleteSet(index) : deleteEncore()
-              }
+              onClick={() => (typeof index === "number" ? deleteSet(index) : deleteEncore())}
               className="hover:bg-red-600/80"
               variant={"secondary"}
             >
@@ -785,8 +678,7 @@ export default function EditSetlist() {
           )}
         </CardContent>
         <CardFooter>
-          {setSpots.length} Songs, ~{setLengthApprox(setSpots)} min (
-          {setLength(setSpots)})
+          {setSpots.length} Songs, ~{setLengthApprox(setSpots)} min ({setLength(setSpots)})
         </CardFooter>
       </Card>
     );
@@ -794,9 +686,7 @@ export default function EditSetlist() {
 
   const PseudoSetDisplay = () => (
     <Card
-      className={`relative w-full border-dashed h-60 ${
-        newSetSongId && "bg-green-900/50"
-      }`}
+      className={`relative w-full border-dashed h-60 ${newSetSongId && "bg-green-900/50"}`}
       onDragOver={dragOverNew}
       onDragLeave={leaveNew}
       onDrop={dropOnNew}
@@ -828,18 +718,10 @@ export default function EditSetlist() {
             {editingName ? (
               <ButtonGroup>
                 <Input value={name} onChange={(e) => setName(e.target.value)} />
-                <Button
-                  className="border"
-                  variant={"secondary"}
-                  onClick={() => setEditingName(false)}
-                >
+                <Button className="border" variant={"secondary"} onClick={() => setEditingName(false)}>
                   <X />
                 </Button>
-                <Button
-                  className="border"
-                  disabled={name.length < 1}
-                  onClick={finishEditingName}
-                >
+                <Button className="border" disabled={name.length < 1} onClick={finishEditingName}>
                   <Check />
                 </Button>
               </ButtonGroup>
@@ -868,11 +750,7 @@ export default function EditSetlist() {
             Times:
             {editingTimes ? (
               <ButtonGroup>
-                <Button
-                  className="border"
-                  variant={"secondary"}
-                  onClick={abortEditingTimes}
-                >
+                <Button className="border" variant={"secondary"} onClick={abortEditingTimes}>
                   <PencilOff />
                 </Button>
                 <Button className="border" onClick={finishEditingTimes}>
@@ -880,11 +758,7 @@ export default function EditSetlist() {
                 </Button>
               </ButtonGroup>
             ) : (
-              <Button
-                onClick={() => setEditingTimes(true)}
-                className="border"
-                variant={"secondary"}
-              >
+              <Button onClick={() => setEditingTimes(true)} className="border" variant={"secondary"}>
                 <Pen />
               </Button>
             )}
@@ -892,20 +766,10 @@ export default function EditSetlist() {
           <div className="flex flex-col gap-4">
             <div className="grid grid-cols-2 w-fit gap-2">
               <div>Raw playing time:</div>
-              <div>
-                {setlist?.setSpots ? (
-                  <b>{setLength(setlist?.setSpots)}</b>
-                ) : (
-                  "0s"
-                )}
-              </div>
+              <div>{setlist?.setSpots ? <b>{setLength(setlist?.setSpots)}</b> : "0s"}</div>
               <div>Total length:</div>
               <div>
-                {setlist?.setSpots && songs ? (
-                  <b>{concertLengthApprox(setlist.setSpots, songs)}</b>
-                ) : (
-                  "0m"
-                )}
+                {setlist?.setSpots && songs ? <b>{concertLengthApprox(setlist.setSpots, songs)}</b> : "0m"}
               </div>
               <div className="w-fit flex flex-row items-center">Start:</div>
               <Input
@@ -929,9 +793,7 @@ export default function EditSetlist() {
                 }}
                 disabled={!editingTimes}
               />
-              <div className="w-fit flex flex-row items-center">
-                Break length (minutes):
-              </div>
+              <div className="w-fit flex flex-row items-center">Break length (minutes):</div>
               <Input
                 className="w-40"
                 type="number"
@@ -942,9 +804,7 @@ export default function EditSetlist() {
                 }}
                 disabled={!editingTimes}
               />
-              <div className="w-fit flex flex-row items-center">
-                Set buffer (minutes):
-              </div>
+              <div className="w-fit flex flex-row items-center">Set buffer (minutes):</div>
               <Input
                 className="w-40"
                 type="number"
@@ -956,14 +816,10 @@ export default function EditSetlist() {
                 disabled={!editingTimes}
               />
             </div>
-            <span>
-              Breaks after each set (except last), with a buffer for each set.
-            </span>
+            <span>Breaks after each set (except last), with a buffer for each set.</span>
           </div>
           <h1 className="font-bold text-2xl">Your Custom Categories:</h1>
-          <div className="grid grid-cols-6 gap-4">
-            {categories?.map(categoryCard)}
-          </div>
+          <div className="grid grid-cols-6 gap-4">{categories?.map(categoryCard)}</div>
           <Button onClick={() => setExportDialogOpen(true)} className="w-fit">
             <FileDown /> Export Setlist
           </Button>
@@ -979,22 +835,25 @@ export default function EditSetlist() {
           <div className="flex flex-row gap-3 items-center">
             Filter songs:
             <ButtonGroup>
-              <Input
-                className="w-60"
-                value={filter}
-                onChange={(e) => setFilter(e.target.value)}
-              />
-              <Button
-                className="border"
-                onClick={() => setFilter("")}
-                variant={"secondary"}
-              >
+              <Input className="w-60" value={filter} onChange={(e) => setFilter(e.target.value)} />
+              <Button className="border" onClick={() => setFilter("")} variant={"secondary"}>
                 <X />
               </Button>
             </ButtonGroup>
           </div>
           <RepertoireTable
-            categories={categories || []}
+            categories={
+              categories?.map((c) => {
+                const visible = setlist?.categoryVisibilities.find((v) => v.categoryId === c.id)?.visible;
+                if (visible !== undefined) {
+                  return {
+                    ...c,
+                    show: visible,
+                  };
+                }
+                return c;
+              }) || []
+            }
             filterTerm={filter}
             usedSongs={new Set(setlist?.setSpots.map((v) => v.songId))}
             readonly

@@ -7,13 +7,7 @@ import { ArrowRight, FileUp, Music, Trash2 } from "lucide-react";
 import { Link } from "react-router";
 import SetlistIngestCard from "./components/SetlistIngestCard";
 import FrontPageSplash from "./components/FrontPageSplash";
-import {
-  Card,
-  CardAction,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "./components/ui/card";
+import { Card, CardAction, CardFooter, CardHeader, CardTitle } from "./components/ui/card";
 
 type SetlistCardProps = {
   id: string;
@@ -23,15 +17,10 @@ type SetlistCardProps = {
 };
 
 function App() {
-  const [setlists, setSetlists] = useState<
-    Omit<SetlistCardProps, "onDelete">[] | undefined
-  >(undefined);
+  const [setlists, setSetlists] = useState<Omit<SetlistCardProps, "onDelete">[] | undefined>(undefined);
   const [loggedIn, setLoggedIn] = useState<boolean | undefined>(undefined);
-  const [repertoireSize, setRepertoireSize] = useState<number | undefined>(
-    undefined
-  );
-  const [ingestSetlistCardOpen, setIngestSetlistCardOpen] =
-    useState<boolean>(false);
+  const [repertoireSize, setRepertoireSize] = useState<number | undefined>(undefined);
+  const [ingestSetlistCardOpen, setIngestSetlistCardOpen] = useState<boolean>(false);
 
   const refetchUserData = () => {
     storage.getSetlists().then(setSetlists);
@@ -96,11 +85,7 @@ function App() {
       <CardHeader className="text-2xl">
         <CardTitle>{name}</CardTitle>
         <CardAction>
-          <Button
-            onClick={onDelete}
-            variant={"secondary"}
-            className="hover:bg-red-600/80 border"
-          >
+          <Button onClick={onDelete} variant={"secondary"} className="hover:bg-red-600/80 border">
             <Trash2 />
           </Button>
         </CardAction>
@@ -121,14 +106,10 @@ function App() {
       <Header onLogin={setLoggedIn} />
       {loggedIn ? (
         <div className="pt-8 px-5 lg:px-30 flex flex-col gap-12">
-          <div className="text-5xl font-bold">
-            Welcome back, {makeUsernameUppercase(storage.user!.name)}!
-          </div>
+          <div className="text-5xl font-bold">Welcome back, {makeUsernameUppercase(storage.user!.name)}!</div>
           <div className="flex flex-col gap-6">
             {repertoireSize !== undefined && (
-              <h2>
-                You have {repertorieSizeText(repertoireSize)} in your Repertoire
-              </h2>
+              <h2>You have {repertorieSizeText(repertoireSize)} in your Repertoire</h2>
             )}
             <div className="flex flex-row justify-between gap-4">
               <Link to="/editRepertoire">
@@ -145,8 +126,7 @@ function App() {
               <h2>
                 {!!setlists ? (
                   <>
-                    You have {setlists.length}{" "}
-                    {setlists.length === 1 ? "setlist" : "setlists"}
+                    You have {setlists.length} {setlists.length === 1 ? "setlist" : "setlists"}
                   </>
                 ) : (
                   <>Your Setlists</>
@@ -159,8 +139,7 @@ function App() {
             <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
               {setlists?.map((p) =>
                 setlistCard({
-                  onDelete: () =>
-                    storage.deleteSetlist(p.id).then(refetchUserData),
+                  onDelete: () => storage.deleteSetlist(p.id).then(refetchUserData),
                   ...p,
                 })
               )}

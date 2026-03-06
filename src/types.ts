@@ -27,6 +27,7 @@ export type setlist = {
   fixedTime: "START" | "END";
   time: string;
   setSpots: setSpot[];
+  categoryVisibilities: { categoryId: string; visible: boolean }[];
 };
 
 export type setSpot = {
@@ -49,4 +50,7 @@ export const categoryTypeLabels = {
   multipleStringCategory: "Multiselect",
 };
 
-export type setlistTimeDTO = Omit<setlist, "name" | "id" | "setSpots">;
+export type setlistTimeDTO = Omit<
+  setlist,
+  "name" | "id" | "setSpots" | "categoryVisibilities"
+>;
