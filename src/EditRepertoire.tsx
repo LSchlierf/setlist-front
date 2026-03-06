@@ -364,7 +364,7 @@ export default function EditRepertoire() {
     return (
       <Card
         onClick={() => setNewCategoryDialogOpen(true)}
-        className="w-full flex flex-col justify-center items-center border-dashed hover:bg-gray-800/50 hover:cursor-pointer"
+        className="w-full flex flex-col justify-center items-center border-dashed hover:bg-gray-800 hover:cursor-pointer"
       >
         <Plus />
       </Card>
