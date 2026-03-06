@@ -1,11 +1,90 @@
 import { io, Socket } from "socket.io-client";
 
+export type HistoryElement = {
+  fw: () => void;
+  rv: () => void;
+};
+
+type History = HistoryElement[];
+
 class storage {
   private static _socket: Socket | undefined = undefined;
   private static _repertoireSocket: Socket | undefined = undefined;
   private static _setlistSockets: Map<string, Socket> = new Map();
   private static _user: { id: string; name: string } | undefined = undefined;
   private static _token: string | undefined = undefined;
+  private static _undoHistory: History = [];
+  private static _redoHistory: History = [];
+  private static _undoCallbacks = new Set<(canUndo: boolean) => void>();
+  private static _redoCallbacks = new Set<(canRedo: boolean) => void>();
+
+  static clearHistory() {
+    console.log("clear");
+    this._undoHistory = [];
+    this._redoHistory = [];
+  }
+
+  static do(action: HistoryElement) {
+    console.log("do");
+    this._redoHistory = [];
+    action.fw();
+    this._undoHistory.push(action);
+
+    this._undoCallbacks.forEach((fn) => fn(this.canUndo()));
+    this._redoCallbacks.forEach((fn) => fn(this.canRedo()));
+  }
+
+  static canUndo() {
+    return this._undoHistory.length > 0;
+  }
+
+  static undo() {
+    console.log("undo");
+    if (!this.canUndo()) {
+      console.log("empty");
+      return;
+    }
+    const element = this._undoHistory.pop()!;
+    element.rv();
+    this._redoHistory.push({ fw: element.rv, rv: element.fw });
+
+    this._undoCallbacks.forEach((fn) => fn(this.canUndo()));
+    this._redoCallbacks.forEach((fn) => fn(this.canRedo()));
+  }
+
+  static canRedo() {
+    return this._redoHistory.length > 0;
+  }
+
+  static redo() {
+    console.log("redo");
+    if (!this.canRedo()) {
+      console.log("empty");
+      return;
+    }
+    const element = this._redoHistory.pop()!;
+    element.rv();
+    this._undoHistory.push({ fw: element.rv, rv: element.fw });
+
+    this._undoCallbacks.forEach((fn) => fn(this.canUndo()));
+    this._redoCallbacks.forEach((fn) => fn(this.canRedo()));
+  }
+
+  static registerUndoCallback(fn: (canUndo: boolean) => void) {
+    this._undoCallbacks.add(fn);
+  }
+
+  static removeUndoCallback(fn: (canUndo: boolean) => void) {
+    this._undoCallbacks.delete(fn);
+  }
+
+  static registerRedoCallback(fn: (canUndo: boolean) => void) {
+    this._redoCallbacks.add(fn);
+  }
+
+  static removeRedoCallback(fn: (canUndo: boolean) => void) {
+    this._redoCallbacks.delete(fn);
+  }
 
   static get user() {
     return this._user;

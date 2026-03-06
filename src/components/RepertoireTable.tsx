@@ -5,6 +5,7 @@ import {
   ArrowUpZA,
   Check,
   Pen,
+  PencilOff,
   Plus,
   Trash2,
   X,
@@ -78,7 +79,10 @@ export default function RepertoireTable({
   };
 
   const handleSongCreate = (newSong: song) => {
-    setSongs((songs) => [...(songs || []), newSong]);
+    setSongs((songs) => [
+      ...(songs?.filter((s) => s.id !== newSong.id) || []),
+      newSong,
+    ]);
     if (!!sorting) {
       switch (sorting.field) {
         case "title":
@@ -158,23 +162,63 @@ export default function RepertoireTable({
       storage.repertoireSocket?.off("repertoire:updateSong", handleSongUpdate);
       storage.repertoireSocket?.off("repertoire:addSong", handleSongCreate);
       storage.repertoireSocket?.off("repertoire", refetchUserData);
+      storage.clearHistory();
     };
   }, []);
 
   const addSong = (newSong: song) => {
-    storage.repertoireSocket?.emit("repertoire:addSong", newSong);
-    handleSongCreate(newSong);
+    storage.do({
+      fw: () => {
+        storage.repertoireSocket?.emit("repertoire:addSong", newSong);
+        handleSongCreate(newSong);
+      },
+      rv: () => {
+        storage.repertoireSocket?.emit("repertoire:deleteSong", newSong.id);
+        handleSongDelete(newSong.id);
+      },
+    });
   };
 
   const finishEditingSong = (song: song) => {
-    storage.repertoireSocket?.emit("repertoire:updateSong", song);
+    storage.do({
+      fw: () => {
+        storage.repertoireSocket?.emit("repertoire:updateSong", song);
+        handleSongUpdate(song);
+      },
+      rv: () => {
+        storage.repertoireSocket?.emit(
+          "repertoire:updateSong",
+          editedSongBefore
+        );
+        handleSongUpdate(editedSongBefore!);
+      },
+    });
     setEditingSong(undefined);
     setEditedSongBefore(undefined);
   };
 
-  const deleteSong = (songId: string) => () => {
-    storage.repertoireSocket?.emit("repertoire:deleteSong", songId);
-    setSongs((songs) => songs?.filter((s) => s.id !== songId));
+  const abortEditingSong = () => {
+    setSongs((songs) =>
+      songs?.map((song) => {
+        if (song.id !== editingSong) return song;
+        return editedSongBefore!;
+      })
+    );
+    setEditedSongBefore(undefined);
+    setEditingSong(undefined);
+  };
+
+  const deleteSong = (song: song) => () => {
+    storage.do({
+      fw: () => {
+        storage.repertoireSocket?.emit("repertoire:deleteSong", song.id);
+        handleSongDelete(song.id);
+      },
+      rv: () => {
+        storage.repertoireSocket?.emit("repertoire:addSong", song);
+        handleSongCreate(song);
+      },
+    });
   };
 
   const InherentPropertyHead = ({
@@ -347,19 +391,19 @@ export default function RepertoireTable({
     category: category,
     song: song
   ) => {
+    const val = !!song.properties[category.id];
     if (!editing) {
-      // if (song.properties[category.id] === undefined) return <></>;
-
-      return !!song.properties[category.id] ? <Check /> : <X />;
+      return val ? <Check /> : <X />;
     }
 
     return (
-      <Checkbox
-        checked={song.properties[category.id]}
-        onCheckedChange={(c) => {
-          changeSimpleSongProperty(song.id, category.id, c);
-        }}
-      />
+      <Button
+        onClick={() => changeSimpleSongProperty(song.id, category.id, !val)}
+        variant={"secondary"}
+        className="border bg-transparent hover:bg-black/10"
+      >
+        {val ? <Check /> : <X />}
+      </Button>
     );
   };
 
@@ -541,42 +585,51 @@ export default function RepertoireTable({
           <TableCell className="w-fit">
             <ButtonGroup>
               {editingSong === id ? (
-                <Button
-                  onClick={() => {
-                    finishEditingSong(song);
-                  }}
-                  className="border"
-                >
-                  <Check /> Done
-                </Button>
+                <>
+                  <Button
+                    onClick={() => finishEditingSong(song)}
+                    className="border"
+                  >
+                    <Check /> Done
+                  </Button>
+                  <Button
+                    onClick={() => abortEditingSong()}
+                    className="border"
+                    variant={"secondary"}
+                  >
+                    <PencilOff /> Cancel
+                  </Button>
+                </>
               ) : (
-                <Button
-                  onClick={() => {
-                    if (editingSong !== undefined) {
-                      setSongs((songs) =>
-                        songs?.map((song) => {
-                          if (song.id !== editingSong) return song;
-                          return editedSongBefore!;
-                        })
-                      );
-                    }
-                    setEditedSongBefore(song);
-                    setEditingSong(id);
-                  }}
-                  className="border"
-                  variant={"secondary"}
-                >
-                  <Pen /> Edit
-                </Button>
+                <>
+                  <Button
+                    onClick={() => {
+                      if (editingSong !== undefined) {
+                        setSongs((songs) =>
+                          songs?.map((song) => {
+                            if (song.id !== editingSong) return song;
+                            return editedSongBefore!;
+                          })
+                        );
+                      }
+                      setEditedSongBefore(song);
+                      setEditingSong(id);
+                    }}
+                    className="border"
+                    variant={"secondary"}
+                  >
+                    <Pen /> Edit
+                  </Button>
+                  <Button
+                    className="hover:bg-red-600/80 border"
+                    variant={"secondary"}
+                    onClick={deleteSong(song)}
+                  >
+                    <Trash2 />
+                    Delete
+                  </Button>
+                </>
               )}
-              <Button
-                className="hover:bg-red-600/80 border"
-                variant={"secondary"}
-                onClick={deleteSong(id)}
-              >
-                <Trash2 />
-                Delete
-              </Button>
             </ButtonGroup>
           </TableCell>
         )}

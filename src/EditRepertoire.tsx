@@ -42,7 +42,10 @@ export default function EditRepertoire() {
   };
 
   const handleCategoryCreate = (newCategory: category) => {
-    setCategories((categories) => [...(categories || []), newCategory]);
+    setCategories((categories) => [
+      ...(categories?.filter((c) => c.id !== newCategory.id) || []),
+      newCategory,
+    ]);
   };
 
   const handleCategoryUpdate = (newCategory: category) => {
@@ -135,35 +138,103 @@ export default function EditRepertoire() {
         handleCategoryCreate
       );
       storage.repertoireSocket?.off("repertoire", refetchUserData);
+      storage.clearHistory();
     };
   }, []);
 
   const addCategory = (newCategory: category) => {
-    storage.repertoireSocket?.emit("repertoire:addCategory", newCategory);
-    handleCategoryCreate(newCategory);
-  };
-
-  const editCategory = (category: category) => {
-    storage.repertoireSocket?.emit("repertoire:updateCategory", category);
-    handleCategoryUpdate(category);
-  };
-
-  const deleteCategory = (categoryId: string) => {
-    storage.repertoireSocket?.emit("repertoire:deleteCategory", categoryId);
-    handleCategoryDelete(categoryId);
-  };
-
-  const setColors = (categoryId: string, colors: { [key: string]: string }) => {
-    storage.repertoireSocket?.emit("repertoire:setColors", {
-      categoryId,
-      colors,
+    storage.do({
+      fw: () => {
+        storage.repertoireSocket?.emit("repertoire:addCategory", newCategory);
+        handleCategoryCreate(newCategory);
+      },
+      rv: () => {
+        storage.repertoireSocket?.emit(
+          "repertoire:deleteCategory",
+          newCategory.id
+        );
+        handleCategoryDelete(newCategory.id);
+      },
     });
-    handleColorUpdate({ categoryId, colors });
   };
 
-  const deleteColors = (categoryId: string) => {
-    storage.repertoireSocket?.emit("repertoire:deleteColors", categoryId);
-    handleColorDelete(categoryId);
+  const editCategory = (category: category, oldCategory: category) => {
+    storage.do({
+      fw: () => {
+        storage.repertoireSocket?.emit("repertoire:updateCategory", category);
+        handleCategoryUpdate(category);
+      },
+      rv: () => {
+        storage.repertoireSocket?.emit(
+          "repertoire:updateCategory",
+          oldCategory
+        );
+        handleCategoryUpdate(oldCategory);
+      },
+    });
+  };
+
+  const deleteCategory = (category: category) => {
+    storage.do({
+      fw: () => {
+        storage.repertoireSocket?.emit(
+          "repertoire:deleteCategory",
+          category.id
+        );
+        handleCategoryDelete(category.id);
+      },
+      rv: () => {
+        storage.repertoireSocket?.emit("repertoire:addCategory", category);
+        handleCategoryCreate(category);
+      },
+    });
+  };
+
+  const setColors = (
+    categoryId: string,
+    colors: { [key: string]: string },
+    colorsBefore: { [key: string]: string } | undefined
+  ) => {
+    storage.do({
+      fw: () => {
+        storage.repertoireSocket?.emit("repertoire:setColors", {
+          categoryId,
+          colors,
+        });
+        handleColorUpdate({ categoryId, colors });
+      },
+      rv: () => {
+        if (colorsBefore === undefined) {
+          storage.repertoireSocket?.emit("repertoire:deleteColors", categoryId);
+          handleColorDelete(categoryId);
+        } else {
+          storage.repertoireSocket?.emit("repertoire:setColors", {
+            categoryId,
+            colors: colorsBefore,
+          });
+          handleColorUpdate({ categoryId, colors: colorsBefore });
+        }
+      },
+    });
+  };
+
+  const deleteColors = (
+    categoryId: string,
+    colors: { [key: string]: string }
+  ) => {
+    storage.do({
+      fw: () => {
+        storage.repertoireSocket?.emit("repertoire:deleteColors", categoryId);
+        handleColorDelete(categoryId);
+      },
+      rv: () => {
+        storage.repertoireSocket?.emit("repertoire:setColors", {
+          categoryId,
+          colors,
+        });
+        handleColorUpdate({ categoryId, colors });
+      },
+    });
   };
 
   const getStringCategoryGradient = (category: category) => {
@@ -224,10 +295,13 @@ export default function EditRepertoire() {
               <Checkbox
                 checked={show}
                 onCheckedChange={(checked) =>
-                  editCategory({
-                    ...category,
-                    show: checked as boolean,
-                  })
+                  editCategory(
+                    {
+                      ...category,
+                      show: checked as boolean,
+                    },
+                    category
+                  )
                 }
               />
             </div>
@@ -263,7 +337,7 @@ export default function EditRepertoire() {
                 {!!colors && (
                   <Button
                     onClick={() => {
-                      deleteColors(id);
+                      deleteColors(id, colors);
                     }}
                     variant={"secondary"}
                     className="hover:bg-red-600/80 border"
@@ -276,7 +350,7 @@ export default function EditRepertoire() {
             <Button
               className="w-full hover:bg-red-600/80 border"
               variant={"secondary"}
-              onClick={() => deleteCategory(id)}
+              onClick={() => deleteCategory(category)}
             >
               <Trash2 /> Delete
             </Button>
@@ -298,8 +372,9 @@ export default function EditRepertoire() {
   };
 
   return (
-    <div className="min-h-screen w-screen bg-gray-950">
+    <div className="min-h-screen w-screen bg-gray-950 relative">
       <Header
+        showUndoRedo
         backButton={
           <Link to="/" className="pr-4">
             <ArrowLeft size={30} />
