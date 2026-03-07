@@ -78,7 +78,6 @@ export default function EditSetlist() {
   };
 
   const handleSetPopulate = (setIndex: number, set: setSpot[]) => {
-    console.log("setPopulate");
     setSetlist((setlist) => ({
       ...setlist!,
       setSpots: [

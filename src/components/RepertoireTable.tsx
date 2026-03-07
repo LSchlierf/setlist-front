@@ -11,14 +11,7 @@ import {
   X,
 } from "lucide-react";
 import { Button } from "./ui/button";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "./ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
 import type { category, InputProps, song } from "@/types";
 import { useEffect, useState, type DragEvent } from "react";
 import storage from "@/lib/storage";
@@ -26,15 +19,7 @@ import { byArtist, byCategory, byLength, byTitle } from "@/lib/songSort";
 import { ButtonGroup } from "./ui/button-group";
 import { Input } from "./ui/input";
 import DurationInput from "./DurationInput";
-import { Checkbox } from "./ui/checkbox";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "./ui/select";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -48,9 +33,7 @@ export type RepertoireTableProps = {
   readonly?: boolean | undefined;
   filterTerm?: string | undefined;
   usedSongs?: Set<string> | undefined;
-  onDragStart?:
-    | ((songId: string) => (e: DragEvent<HTMLTableRowElement>) => void)
-    | undefined;
+  onDragStart?: ((songId: string) => (e: DragEvent<HTMLTableRowElement>) => void) | undefined;
   onDragOver?: ((e: DragEvent<any>) => void) | undefined;
   onDrop?: ((e: DragEvent<any>) => void) | undefined;
 };
@@ -66,12 +49,11 @@ export default function RepertoireTable({
 }: RepertoireTableProps) {
   const [songs, setSongs] = useState<undefined | song[]>(undefined);
   const [editingSong, setEditingSong] = useState<string | undefined>(undefined);
-  const [sorting, setSorting] = useState<
-    { field: string; asc: boolean } | undefined
-  >({ field: "title", asc: true });
-  const [editedSongBefore, setEditedSongBefore] = useState<song | undefined>(
-    undefined
-  );
+  const [sorting, setSorting] = useState<{ field: string; asc: boolean } | undefined>({
+    field: "title",
+    asc: true,
+  });
+  const [editedSongBefore, setEditedSongBefore] = useState<song | undefined>(undefined);
   const [newSongDialogOpen, setNewSongDialogOpen] = useState<boolean>(false);
 
   const refetchUserData = () => {
@@ -79,10 +61,7 @@ export default function RepertoireTable({
   };
 
   const handleSongCreate = (newSong: song) => {
-    setSongs((songs) => [
-      ...(songs?.filter((s) => s.id !== newSong.id) || []),
-      newSong,
-    ]);
+    setSongs((songs) => [...(songs?.filter((s) => s.id !== newSong.id) || []), newSong]);
     if (!!sorting) {
       switch (sorting.field) {
         case "title":
@@ -129,10 +108,9 @@ export default function RepertoireTable({
     setSongs(byLength(asc));
   };
 
-  const sortByCategory =
-    (categoryId: string, categoryType: string) => (asc: boolean) => {
-      setSongs(byCategory(asc, categoryId, categoryType));
-    };
+  const sortByCategory = (categoryId: string, categoryType: string) => (asc: boolean) => {
+    setSongs(byCategory(asc, categoryId, categoryType));
+  };
 
   const filterByTerm = (song: song) => {
     if (filterTerm === undefined || filterTerm.length === 0) return true;
@@ -180,16 +158,22 @@ export default function RepertoireTable({
   };
 
   const finishEditingSong = (song: song) => {
+    for (const cat of Object.keys(song.properties)) {
+      if (categories.find((c) => c.id === cat)?.type === "numberCategory") {
+        const valueRange = categories.find((c) => c.id === cat)!.valueRange;
+        song.properties[cat] = Math.min(
+          Math.max(song.properties[cat], Math.min(...valueRange)),
+          Math.max(...valueRange)
+        );
+      }
+    }
     storage.do({
       fw: () => {
         storage.repertoireSocket?.emit("repertoire:updateSong", song);
         handleSongUpdate(song);
       },
       rv: () => {
-        storage.repertoireSocket?.emit(
-          "repertoire:updateSong",
-          editedSongBefore
-        );
+        storage.repertoireSocket?.emit("repertoire:updateSong", editedSongBefore);
         handleSongUpdate(editedSongBefore!);
       },
     });
@@ -254,26 +238,14 @@ export default function RepertoireTable({
             className="border"
             variant={"secondary"}
           >
-            {isSortedByThis ? (
-              isSortedAsc ? (
-                <ArrowDownAZ />
-              ) : (
-                <ArrowUpAZ />
-              )
-            ) : (
-              <ArrowUpDown />
-            )}
+            {isSortedByThis ? isSortedAsc ? <ArrowDownAZ /> : <ArrowUpAZ /> : <ArrowUpDown />}
           </Button>
         </div>
       </TableHead>
     );
   };
 
-  const CategoryHead = ({
-    id,
-    title,
-    sort,
-  }: category & { sort: (asc: boolean) => void }) => {
+  const CategoryHead = ({ id, title, sort }: category & { sort: (asc: boolean) => void }) => {
     const isSortedByThis = sorting?.field === id;
     const isSortedAsc = sorting?.asc;
 
@@ -298,15 +270,7 @@ export default function RepertoireTable({
             className="border"
             variant={"secondary"}
           >
-            {isSortedByThis ? (
-              isSortedAsc ? (
-                <ArrowDownAZ />
-              ) : (
-                <ArrowUpZA />
-              )
-            ) : (
-              <ArrowUpDown />
-            )}
+            {isSortedByThis ? isSortedAsc ? <ArrowDownAZ /> : <ArrowUpZA /> : <ArrowUpDown />}
           </Button>
         </div>
       </TableHead>
@@ -353,25 +317,19 @@ export default function RepertoireTable({
   const getTableCellStyle = (category: category, song: song) => {
     if (!!category.colors && category.type === "booleanCategory") {
       return {
-        backgroundColor:
-          category.colors[(!!song.properties[category.id]).toString()],
+        backgroundColor: category.colors[(!!song.properties[category.id]).toString()],
       };
     }
     if (!!category.colors && song.properties[category.id] !== undefined) {
       return {
-        backgroundColor:
-          category.colors[song.properties[category.id].toString()],
+        backgroundColor: category.colors[song.properties[category.id].toString()],
       };
     }
 
     return undefined;
   };
 
-  const changeSimpleSongProperty = (
-    songId: string,
-    categoryId: string,
-    newValue: any
-  ) => {
+  const changeSimpleSongProperty = (songId: string, categoryId: string, newValue: any) => {
     setSongs((songs) =>
       songs?.map((s) => {
         if (s.id !== songId) return s;
@@ -386,11 +344,18 @@ export default function RepertoireTable({
     );
   };
 
-  const BooleanProperty = (
-    editing: boolean,
-    category: category,
-    song: song
-  ) => {
+  const removeSimpleSongProperty = (songId: string, categoryId: string) => {
+    setSongs((songs) =>
+      songs?.map((s) => {
+        if (s.id !== songId) return s;
+        let newSong = { ...s };
+        delete s.properties[categoryId];
+        return newSong;
+      })
+    );
+  };
+
+  const BooleanProperty = (editing: boolean, category: category, song: song) => {
     const val = !!song.properties[category.id];
     if (!editing) {
       return val ? <Check /> : <X />;
@@ -415,23 +380,19 @@ export default function RepertoireTable({
         <Input
           type="number"
           className="w-20"
-          value={
-            song.properties[category.id] === undefined
-              ? ""
-              : song.properties[category.id]
-          }
+          value={song.properties[category.id] === undefined ? "" : song.properties[category.id]}
           min={Math.min(...category.valueRange)}
           max={Math.max(...category.valueRange)}
           onChange={(e) => {
+            changeSimpleSongProperty(song.id, category.id, Number(e.target.value));
+          }}
+          onBlur={(e) => {
             changeSimpleSongProperty(
               song.id,
               category.id,
               Math.max(
-                Math.min(...category.valueRange),
-                Math.min(
-                  Math.max(...category.valueRange),
-                  Number(e.target.value)
-                )
+                Math.min(Number(e.target.value), Math.max(...category.valueRange)),
+                Math.min(...category.valueRange)
               )
             );
           }}
@@ -439,9 +400,7 @@ export default function RepertoireTable({
         <Button
           variant={"ghost"}
           className="border"
-          onClick={() =>
-            changeSimpleSongProperty(song.id, category.id, undefined)
-          }
+          onClick={() => removeSimpleSongProperty(song.id, category.id)}
         >
           <X />
         </Button>
@@ -456,11 +415,7 @@ export default function RepertoireTable({
       <Select
         defaultValue={song.properties[category.id] || "clear"}
         onValueChange={(v) => {
-          changeSimpleSongProperty(
-            song.id,
-            category.id,
-            v === "clear" ? undefined : v
-          );
+          changeSimpleSongProperty(song.id, category.id, v === "clear" ? undefined : v);
         }}
       >
         <SelectTrigger>
@@ -480,11 +435,7 @@ export default function RepertoireTable({
     );
   };
 
-  const MultipleStringProperty = (
-    editing: boolean,
-    category: category,
-    song: song
-  ) => {
+  const MultipleStringProperty = (editing: boolean, category: category, song: song) => {
     if (!editing) return song.properties[category.id]?.join(", ");
 
     return (
@@ -555,12 +506,8 @@ export default function RepertoireTable({
         draggable={readonly}
         onDragStart={onDragStart?.(song.id)}
       >
-        <TableCell>
-          {StringInput({ editing, value: title, onChange: editTtile(id) })}
-        </TableCell>
-        <TableCell>
-          {StringInput({ editing, value: artist, onChange: editArtist(id) })}
-        </TableCell>
+        <TableCell>{StringInput({ editing, value: title, onChange: editTtile(id) })}</TableCell>
+        <TableCell>{StringInput({ editing, value: artist, onChange: editArtist(id) })}</TableCell>
         <TableCell>
           {DurationInput({
             editing,
@@ -571,32 +518,20 @@ export default function RepertoireTable({
         {categories
           ?.filter(({ show }) => show)
           .map((category) => (
-            <TableCell
-              style={getTableCellStyle(category, song)}
-              key={`property-${id}-${category.id}`}
-            >
+            <TableCell style={getTableCellStyle(category, song)} key={`property-${id}-${category.id}`}>
               {PropertyInput(editing, category, song)}
             </TableCell>
           ))}
-        <TableCell>
-          {StringInput({ editing, value: notes, onChange: editNotes(id) })}
-        </TableCell>
+        <TableCell>{StringInput({ editing, value: notes, onChange: editNotes(id) })}</TableCell>
         {!readonly && (
           <TableCell className="w-fit">
             <ButtonGroup>
               {editingSong === id ? (
                 <>
-                  <Button
-                    onClick={() => finishEditingSong(song)}
-                    className="border"
-                  >
+                  <Button onClick={() => finishEditingSong(song)} className="border">
                     <Check /> Done
                   </Button>
-                  <Button
-                    onClick={() => abortEditingSong()}
-                    className="border"
-                    variant={"secondary"}
-                  >
+                  <Button onClick={() => abortEditingSong()} className="border" variant={"secondary"}>
                     <PencilOff /> Cancel
                   </Button>
                 </>
@@ -638,8 +573,7 @@ export default function RepertoireTable({
   };
 
   const totalLength = () => {
-    const len =
-      songs?.reduce((acc: number, song: song) => acc + song.length, 0) || 0;
+    const len = songs?.reduce((acc: number, song: song) => acc + song.length, 0) || 0;
 
     const h = Math.floor(len / 3600);
     const m = Math.floor(len / 60) % 60;
@@ -652,29 +586,13 @@ export default function RepertoireTable({
       <Table onDragOver={onDragOver} onDrop={onDrop} className="relative">
         <TableHeader>
           <TableRow>
-            <InherentPropertyHead
-              title="Song Title"
-              field="title"
-              sort={sortByTitle}
-            />
-            <InherentPropertyHead
-              title="Artist"
-              field="artist"
-              sort={sortByArtist}
-            />
-            <InherentPropertyHead
-              title="Length"
-              field="duration"
-              sort={sortByLength}
-            />
+            <InherentPropertyHead title="Song Title" field="title" sort={sortByTitle} />
+            <InherentPropertyHead title="Artist" field="artist" sort={sortByArtist} />
+            <InherentPropertyHead title="Length" field="duration" sort={sortByLength} />
             {categories
               ?.filter(({ show }) => show)
               .map((c) => (
-                <CategoryHead
-                  key={c.id}
-                  {...c}
-                  sort={sortByCategory(c.id, c.type)}
-                />
+                <CategoryHead key={c.id} {...c} sort={sortByCategory(c.id, c.type)} />
               ))}
             <TableHead>Notes</TableHead>
             {!readonly && <TableHead>Actions</TableHead>}
@@ -685,10 +603,7 @@ export default function RepertoireTable({
           {!readonly && (
             <TableRow>
               <TableCell>
-                <Button
-                  onClick={() => setNewSongDialogOpen(true)}
-                  className="border"
-                >
+                <Button onClick={() => setNewSongDialogOpen(true)} className="border">
                   <Plus />
                   Add Song
                 </Button>
@@ -707,12 +622,7 @@ export default function RepertoireTable({
         </TableBody>
       </Table>
       {songs?.length} Songs, {totalLength()} total.
-      {newSongDialogOpen && (
-        <NewSongCard
-          onClose={() => setNewSongDialogOpen(false)}
-          onFinish={addSong}
-        />
-      )}
+      {newSongDialogOpen && <NewSongCard onClose={() => setNewSongDialogOpen(false)} onFinish={addSong} />}
     </>
   );
 }

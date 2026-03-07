@@ -115,7 +115,7 @@ function App() {
               <Link to="/editRepertoire">
                 <Button className="w-fit border" variant={"secondary"}>
                   <Music />
-                  Edit Repertoire
+                  Manage Repertoire
                   <ArrowRight />
                 </Button>
               </Link>
