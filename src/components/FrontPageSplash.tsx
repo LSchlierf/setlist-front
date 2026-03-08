@@ -19,10 +19,6 @@ export default function FrontPageSplash() {
   );
 }
 
-export function TinySplash() {
-  return <div className="text-9xl title-splash">SongRack</div>;
-}
-
 function Arrow() {
   return (
     <svg
