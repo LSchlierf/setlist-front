@@ -1,14 +1,6 @@
 import { useState } from "react";
 import { Button } from "./ui/button";
-import {
-  Card,
-  CardAction,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "./ui/card";
+import { Card, CardAction, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "./ui/card";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import storage from "@/lib/storage";
@@ -92,11 +84,7 @@ export default function LoginCard({ onClose, onLogin }: LoginCardProps) {
         >
           Log out
         </Button>
-        <Button
-          className="w-full"
-          onClick={() => setChangePw(true)}
-          variant={"secondary"}
-        >
+        <Button className="w-full" onClick={() => setChangePw(true)} variant={"secondary"}>
           Change Password
         </Button>
         <Button className="w-full" onClick={onClose} variant="secondary">
@@ -144,22 +132,14 @@ export default function LoginCard({ onClose, onLogin }: LoginCardProps) {
             ></Input>
           </div>
           {newPassword2.length > 0 &&
-            (newPassword1 === newPassword2
-              ? "New Passwords match"
-              : "New Passwords don't match")}
+            (newPassword1 === newPassword2 ? "New Passwords match" : "New Passwords don't match")}
 
           <Button
-            disabled={
-              password.length < 1 ||
-              newPassword1.length < 6 ||
-              newPassword1 !== newPassword2
-            }
+            disabled={password.length < 1 || newPassword1.length < 6 || newPassword1 !== newPassword2}
             onClick={() =>
               storage
                 .changePassword(password, newPassword1)
-                .then((v) =>
-                  v ? onClose() : setError("Error while changing password")
-                )
+                .then((v) => (v ? onClose() : setError("Error while changing password")))
             }
           >
             Submit
@@ -217,9 +197,7 @@ export default function LoginCard({ onClose, onLogin }: LoginCardProps) {
             : "Choose a username and password to sign up"}
         </CardDescription>
         <CardAction>
-          <Button onClick={() => setLogin((l) => !l)}>
-            {login ? "Sign up" : "Log in"}
-          </Button>
+          <Button onClick={() => setLogin((l) => !l)}>{login ? "Sign up" : "Log in"}</Button>
         </CardAction>
       </CardHeader>
       <CardContent>
@@ -232,6 +210,7 @@ export default function LoginCard({ onClose, onLogin }: LoginCardProps) {
               placeholder="Username"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && formSubmit()}
             ></Input>
           </div>
           <div className="grid gap-2">
@@ -242,6 +221,7 @@ export default function LoginCard({ onClose, onLogin }: LoginCardProps) {
               placeholder="Password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && formSubmit()}
             ></Input>
           </div>
         </div>

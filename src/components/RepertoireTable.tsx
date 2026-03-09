@@ -450,14 +450,15 @@ export default function RepertoireTable({
             <DropdownMenuCheckboxItem
               key={value}
               checked={!!song.properties[category.id]?.includes(value)}
-              onCheckedChange={(c) => {
+              onClick={(e) => {
+                e.preventDefault(); // done without onCheckedChange so the dropdown doesn't close
                 setSongs((songs) =>
                   songs?.map((s) => {
                     if (s.id !== song.id) return s;
 
                     const newProperty = category.valueRange.filter((v) => {
                       if (v === value) {
-                        return c;
+                        return !(song.properties[category.id]?.includes(v) || false);
                       }
                       return s.properties[category.id]?.includes(v) || false;
                     });

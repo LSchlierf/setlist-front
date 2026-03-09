@@ -540,9 +540,13 @@ export default function EditSetlist() {
     const { id, title, show, colors } = category;
     const visible = getCategoryVisibility(category);
     return (
-      <Card key={id}>
+      <Card className="w-40" key={id}>
         <CardHeader>
-          <CardTitle>{title}</CardTitle>
+          <CardTitle
+            className={`${!!colors ? "" : "-mr-12"} max-w-30 overflow-hidden  text-ellipsis`} // hack to make text not overflow, but wider when no color gradient button
+          >
+            {title}
+          </CardTitle>
           <CardAction>
             {!!colors ? (
               ColorsGradient(category)
@@ -818,10 +822,15 @@ export default function EditSetlist() {
             <span>Breaks after each set (except last), with a buffer for each set.</span>
           </div>
           <h1 className="font-bold text-2xl">Your Custom Categories:</h1>
-          <div className="grid grid-cols-6 gap-4">{categories?.map(categoryCard)}</div>
-          <Button onClick={() => setExportDialogOpen(true)} className="w-fit">
-            <FileDown /> Export Setlist
-          </Button>
+          <div className="gap-4 max-w-300 w-full relative">
+            <div className="flex flex-col w-full absolute gap-6">
+              <div className="flex flex-row flex-wrap gap-4">{categories?.map(categoryCard)}</div>
+              <Button onClick={() => setExportDialogOpen(true)} className="w-fit">
+                <FileDown /> Export Setlist
+              </Button>
+              <div />
+            </div>
+          </div>
         </div>
       </div>
     </ResizablePanel>
