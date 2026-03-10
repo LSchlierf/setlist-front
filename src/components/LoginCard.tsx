@@ -4,6 +4,7 @@ import { Card, CardAction, CardContent, CardDescription, CardFooter, CardHeader,
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import storage from "@/lib/storage";
+import { ButtonGroup } from "./ui/button-group";
 
 export type LoginCardProps = {
   onClose: () => void;
@@ -20,7 +21,7 @@ export default function LoginCard({ onClose, onLogin }: LoginCardProps) {
   const [newPassword1, setNewPassword1] = useState("");
   const [newPassword2, setNewPassword2] = useState("");
 
-  const doLogin = async () => {
+  const doLogin = async (username: string, password: string) => {
     const response = await fetch("/api/login", {
       method: "POST",
       headers: {
@@ -64,7 +65,7 @@ export default function LoginCard({ onClose, onLogin }: LoginCardProps) {
   };
 
   const formSubmit = () => {
-    login ? doLogin() : doSignup();
+    login ? doLogin(username, password) : doSignup();
   };
 
   const LogoutFrom = () => (
@@ -84,7 +85,12 @@ export default function LoginCard({ onClose, onLogin }: LoginCardProps) {
         >
           Log out
         </Button>
-        <Button className="w-full" onClick={() => setChangePw(true)} variant={"secondary"}>
+        <Button
+          disabled={storage.user?.id === "testuser"}
+          className="w-full"
+          onClick={() => setChangePw(true)}
+          variant={"secondary"}
+        >
           Change Password
         </Button>
         <Button className="w-full" onClick={onClose} variant="secondary">
@@ -190,14 +196,19 @@ export default function LoginCard({ onClose, onLogin }: LoginCardProps) {
   ) : (
     <Card className="z-10 bg-gray-900 w-full max-w-sm absolute top-[50%] left-[50%] transform-(--center-transform)">
       <CardHeader>
-        <CardTitle>{login ? "Log in to your Account" : "Sign up"}</CardTitle>
+        <CardTitle>{login ? "Log In to Your Account" : "Sign Up"}</CardTitle>
         <CardDescription>
           {login
             ? "Enter your username and password below to log in"
             : "Choose a username and password to sign up"}
         </CardDescription>
         <CardAction>
-          <Button onClick={() => setLogin((l) => !l)}>{login ? "Sign up" : "Log in"}</Button>
+          <ButtonGroup orientation={"vertical"}>
+            <Button onClick={() => setLogin((l) => !l)}>{login ? "Sign Up" : "Log In"}</Button>
+            <Button onClick={() => doLogin("testuser", "password")} variant={"secondary"}>
+              Use Test Account
+            </Button>
+          </ButtonGroup>
         </CardAction>
       </CardHeader>
       <CardContent>
@@ -228,7 +239,7 @@ export default function LoginCard({ onClose, onLogin }: LoginCardProps) {
       </CardContent>
       <CardFooter className="flex-col gap-2">
         <Button className="w-full" onClick={formSubmit}>
-          {login ? "Log in" : "Sign up"}
+          {login ? "Log In" : "Sign Up"}
         </Button>
         <Button className="w-full" variant={"secondary"} onClick={onClose}>
           Close

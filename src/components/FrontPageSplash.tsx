@@ -1,3 +1,6 @@
+import { Github } from "lucide-react";
+import { Button } from "./ui/button";
+
 export default function FrontPageSplash() {
   return (
     <div className="relative w-full flex-1 overflow-auto">
@@ -14,6 +17,14 @@ export default function FrontPageSplash() {
       <div className="absolute top-[55%] left-[50%] transform-(--center-transform) w-fit h-fit flex flex-col items-center gap-20">
         <div className="text-9xl title-splash">SongRack</div>
         <div className="text-2xl font-bold">Your New Setlist Helper</div>
+      </div>
+      <div className="absolute right-23 bottom-10 flex flex-row gap-4 items-center">
+        More Info:
+        <a target="_blank" rel="noopener noreferer" href="https://GitHub.com/LSchlierf/SongRack">
+          <Button>
+            <Github />
+          </Button>
+        </a>
       </div>
     </div>
   );

@@ -129,7 +129,7 @@ export function ColorsGradient(category: category) {
       break;
   }
 
-  return <Button className="hover:cursor-default!" style={{ background: gradient }}></Button>;
+  return <Button className="hover:cursor-default! w-9" style={{ background: gradient }}></Button>;
 }
 
 export function getPartitionedSets(setSpots: setSpot[]) {

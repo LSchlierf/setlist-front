@@ -551,12 +551,12 @@ export default function EditSetlist() {
             {!!colors ? (
               ColorsGradient(category)
             ) : (
-              <Button className="hover:bg-transparent! hover:cursor-default!" variant={"ghost"} />
+              <Button className="hover:bg-transparent! hover:cursor-default! w-9" variant={"ghost"} />
             )}
           </CardAction>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-row justify-between gap-2">
+          <div className="flex flex-row justify-between gap-2 items-center">
             <div className="font-bold">Show:</div>
             <Checkbox
               checked={visible === undefined ? show : visible}
