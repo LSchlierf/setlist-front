@@ -117,11 +117,12 @@ function SetlistDetailedPDF({
     width100: { width: "100%" },
     height100: { height: "100%" },
     heightMin: { height: 40 },
-    timeBlock: { width: "8%", height: "100%" },
+    timeBlock: { width: "8%", display: "flex" },
     breakLine: {
       backgroundColor: "lightgray",
-      borderBottom: "1px solid black",
-      borderTop: "1px solid black",
+    },
+    noBottomBorder: {
+      borderBottom: "none",
     },
     headerTextBold: { fontFamily: "Helvetica-Bold", fontSize: fontSizeHeader },
     headerTextNotBold: { fontFamily: "Helvetica", fontSize: fontSizeHeader },
@@ -135,8 +136,8 @@ function SetlistDetailedPDF({
     justifyCenter: { justifyContent: "center" },
     paddingBottom: { paddingBottom: 15 },
     alignCenter: { alignItems: "center" },
-    cell: { border: "1px solid black", padding: 1, margin: -0.1, flex: "auto", flexGrow: 1 },
-    invisCell: { borderRight: "1px solid black", padding: 1 },
+    cell: { border: "1px solid black", padding: 1, margin: -0.5, flex: "auto", flexGrow: 1 },
+    invisCell: { padding: 0.5, margin: -0.5, flex: "auto", flexGrow: 1 },
     title: { width: titleWidth + "%" },
     notes: { width: notesWidth + "%" },
     bool: { width: boolWidth + "%" },
@@ -166,7 +167,9 @@ function SetlistDetailedPDF({
             <Text style={styles.headerTextBold}>Start</Text>
           </View>
         </View>
-        <View style={[styles.cell, styles.timeBlock, styles.flexRow, styles.justifyCenter]}>
+        <View
+          style={[styles.cell, styles.timeBlock, styles.flexRow, styles.justifyCenter, styles.noBottomBorder]}
+        >
           <Text style={styles.headerTextNotBold}>{startTime}</Text>
         </View>
       </View>
@@ -220,12 +223,14 @@ function SetlistDetailedPDF({
     return (
       <View key={setIndex} wrap={false}>
         <View style={[styles.flexRow, styles.width100 /*styles.setBlock*/]}>
-          <View style={styles.values}>
+          <View style={[styles.values, styles.invisCell]}>
             <View style={styles.column}>
               {set.map((song: song, songIndex: number) => songRow(song, songIndex, setIndex))}
             </View>
           </View>
-          <View style={[styles.cell, styles.timeBlock, styles.flexRow]}>
+          <View
+            style={[styles.cell, styles.noBottomBorder, styles.timeBlock, styles.flexRow, styles.height100]}
+          >
             <View
               style={[
                 styles.column,
@@ -248,8 +253,8 @@ function SetlistDetailedPDF({
           </View>
         </View>
         <View style={[styles.flexRow, styles.width100]}>
-          <View style={[styles.values, styles.breakLine, styles.justifyEnd]}>
-            <View style={[styles.invisCell, styles.time, styles.flexRow, styles.justifyEnd]}>
+          <View style={[styles.values, styles.breakLine, styles.justifyEnd, styles.cell]}>
+            <View style={[styles.time, styles.flexRow, styles.justifyEnd]}>
               <Text style={[styles.textTime]}>{songStarts[setIndex][set.length]}</Text>
             </View>
           </View>
