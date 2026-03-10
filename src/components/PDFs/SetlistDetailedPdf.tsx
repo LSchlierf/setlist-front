@@ -20,14 +20,12 @@ function SetlistDetailedPDF({
   concert,
   categories,
 }: SetlistDetailedPDFProps) {
-  const categoriesOther =
-    categories.filter((c: category) => c.type !== "booleanCategory") || [];
-  const catsBool =
-    categories.filter((c: category) => c.type === "booleanCategory") || [];
+  const categoriesOther = categories.filter((c: category) => c.type !== "booleanCategory") || [];
+  const catsBool = categories.filter((c: category) => c.type === "booleanCategory") || [];
 
   const titleWidth = 18;
   const boolWidth = 15;
-  const notesWidth = 28;
+  const notesWidth = 25;
   const timeWidth = 4.5;
 
   const remainingWidth = 100 - titleWidth - boolWidth - notesWidth - timeWidth;
@@ -51,9 +49,7 @@ function SetlistDetailedPDF({
     }
     thisSetStarts.push(nextRounded(nextTime(lastEnd, bufferLength * 60)));
     if (set < sets.length - 1) {
-      lastEnd = nextRounded(
-        nextTime(lastEnd, breakLength * 60 + bufferLength * 60)
-      );
+      lastEnd = nextRounded(nextTime(lastEnd, breakLength * 60 + bufferLength * 60));
     } else {
       lastEnd = nextRounded(nextTime(lastEnd, bufferLength * 60));
     }
@@ -139,7 +135,7 @@ function SetlistDetailedPDF({
     justifyCenter: { justifyContent: "center" },
     paddingBottom: { paddingBottom: 15 },
     alignCenter: { alignItems: "center" },
-    cell: { border: "1px solid black", padding: 1 },
+    cell: { border: "1px solid black", padding: 1, margin: -0.1, flex: "auto", flexGrow: 1 },
     invisCell: { borderRight: "1px solid black", padding: 1 },
     title: { width: titleWidth + "%" },
     notes: { width: notesWidth + "%" },
@@ -170,14 +166,7 @@ function SetlistDetailedPDF({
             <Text style={styles.headerTextBold}>Start</Text>
           </View>
         </View>
-        <View
-          style={[
-            styles.cell,
-            styles.timeBlock,
-            styles.flexRow,
-            styles.justifyCenter,
-          ]}
-        >
+        <View style={[styles.cell, styles.timeBlock, styles.flexRow, styles.justifyCenter]}>
           <Text style={styles.headerTextNotBold}>{startTime}</Text>
         </View>
       </View>
@@ -212,19 +201,15 @@ function SetlistDetailedPDF({
             {[
               song.notes,
               ...catsBool.map((c: category) =>
-                song.properties && song.properties[c.id] === true
-                  ? c.title
-                  : undefined
+                song.properties && song.properties[c.id] === true ? c.title : undefined
               ),
             ]
-              .filter((p) => p !== undefined)
+              .filter((p) => p !== undefined && p.length > 0)
               .join(", ")}
           </Text>
         </View>
         <View style={[styles.cell, styles.notes]} />
-        <View
-          style={[styles.cell, styles.time, styles.flexRow, styles.justifyEnd]}
-        >
+        <View style={[styles.cell, styles.time, styles.flexRow, styles.justifyEnd]}>
           <Text style={styles.textTime}>{songStarts[setIndex][songIndex]}</Text>
         </View>
       </View>
@@ -237,9 +222,7 @@ function SetlistDetailedPDF({
         <View style={[styles.flexRow, styles.width100 /*styles.setBlock*/]}>
           <View style={styles.values}>
             <View style={styles.column}>
-              {set.map((song: song, songIndex: number) =>
-                songRow(song, songIndex, setIndex)
-              )}
+              {set.map((song: song, songIndex: number) => songRow(song, songIndex, setIndex))}
             </View>
           </View>
           <View style={[styles.cell, styles.timeBlock, styles.flexRow]}>
@@ -266,27 +249,11 @@ function SetlistDetailedPDF({
         </View>
         <View style={[styles.flexRow, styles.width100]}>
           <View style={[styles.values, styles.breakLine, styles.justifyEnd]}>
-            <View
-              style={[
-                styles.invisCell,
-                styles.time,
-                styles.flexRow,
-                styles.justifyEnd,
-              ]}
-            >
-              <Text style={[styles.textTime]}>
-                {songStarts[setIndex][set.length]}
-              </Text>
+            <View style={[styles.invisCell, styles.time, styles.flexRow, styles.justifyEnd]}>
+              <Text style={[styles.textTime]}>{songStarts[setIndex][set.length]}</Text>
             </View>
           </View>
-          <View
-            style={[
-              styles.timeBlock,
-              styles.flexRow,
-              styles.justifyCenter,
-              styles.cell,
-            ]}
-          >
+          <View style={[styles.timeBlock, styles.flexRow, styles.justifyCenter, styles.cell]}>
             <Text style={styles.textTime}>
               {setIndex === sets.length - 1 ? "" : breakLength + " min break"}
             </Text>
@@ -309,9 +276,7 @@ function SetlistDetailedPDF({
       >
         <View style={styles.values}>
           <View style={styles.column}>
-            {encore.map((song: song, songIndex: number) =>
-              songRow(song, songIndex, sets.length)
-            )}
+            {encore.map((song: song, songIndex: number) => songRow(song, songIndex, sets.length))}
           </View>
         </View>
         <View style={[styles.cell, styles.timeBlock, styles.flexRow]}>
@@ -324,9 +289,7 @@ function SetlistDetailedPDF({
               styles.alignCenter,
             ]}
           >
-            <Text style={styles.textTimeBlock}>
-              {setTimeRounded(encore) / 60} min
-            </Text>
+            <Text style={styles.textTimeBlock}>{setTimeRounded(encore) / 60} min</Text>
           </View>
         </View>
       </View>
@@ -362,16 +325,11 @@ function SetlistDetailedPDF({
             </View>
             <View style={[styles.time, styles.flexRow, styles.justifyEnd]}>
               <Text style={styles.textTime}>
-                {nextTime(
-                  "00:00",
-                  setTime([{ length: (sets.length - 1) * breakLength * 60 }])
-                )}
+                {nextTime("00:00", setTime([{ length: (sets.length - 1) * breakLength * 60 }]))}
               </Text>
             </View>
           </View>
-          <View
-            style={[styles.timeBlock, styles.flexRow, styles.justifyCenter]}
-          >
+          <View style={[styles.timeBlock, styles.flexRow, styles.justifyCenter]}>
             <Text style={styles.textTime}>Start: {nextTime(startTime, 0)}</Text>
           </View>
         </View>
@@ -393,9 +351,7 @@ function SetlistDetailedPDF({
               </Text>
             </View>
           </View>
-          <View
-            style={[styles.timeBlock, styles.flexRow, styles.justifyCenter]}
-          >
+          <View style={[styles.timeBlock, styles.flexRow, styles.justifyCenter]}>
             <Text style={styles.textTime}>
               End:{" "}
               {nextTime(

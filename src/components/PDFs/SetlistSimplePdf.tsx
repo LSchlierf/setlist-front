@@ -4,13 +4,10 @@ export type SetlistSimplePDFProps = {
   concert: string;
   sets: { title: string; id: string }[][];
   encore: { title: string; id: string }[];
+  wrapping: boolean;
 };
 
-export default function SetlistSimplePDF({
-  concert,
-  sets,
-  encore,
-}: SetlistSimplePDFProps) {
+export default function SetlistSimplePDF({ concert, sets, encore, wrapping }: SetlistSimplePDFProps) {
   const styles = StyleSheet.create({
     page: {
       padding: 40,
@@ -65,33 +62,32 @@ export default function SetlistSimplePDF({
       let set = setViews.shift()!;
       let setStarted = false;
 
-      while (
-        set.length > rowsPerColumn ||
-        (setStarted && set.length > rowsPerColumn - rowsThisColumn - 1)
-      ) {
-        let part = set.slice(
-          0,
-          rowsPerColumn - rowsThisColumn - (setStarted ? 1 : 0)
-        );
-        set = set.slice(rowsPerColumn - rowsThisColumn - (setStarted ? 1 : 0));
+      while (set.length > rowsPerColumn || (setStarted && set.length > rowsPerColumn - rowsThisColumn - 1)) {
+        const restRows = rowsPerColumn - rowsThisColumn - (setStarted ? 1 : 0);
 
-        pages[pages.length - 1].push(
-          <View
-            key={`settitle-${pages.length}-${columsThisPage}-${rowsThisColumn}`}
-            style={styles.set}
-          >
-            {setStarted ? (
-              <View>
-                <Text style={styles.setTitle}> </Text>
-              </View>
-            ) : (
-              <></>
-            )}
-            {part}
-          </View>
-        );
+        console.log(restRows);
 
-        setStarted = true;
+        if (restRows > 4 || wrapping) {
+          // if wrapping disabled, only start sets if its at least 4 songs (plus title)
+          let part = set.slice(0, rowsPerColumn - rowsThisColumn - (setStarted ? 1 : 0));
+          set = set.slice(rowsPerColumn - rowsThisColumn - (setStarted ? 1 : 0));
+
+          pages[pages.length - 1].push(
+            <View key={`settitle-${pages.length}-${columsThisPage}-${rowsThisColumn}`} style={styles.set}>
+              {setStarted ? (
+                <View>
+                  <Text style={styles.setTitle}> </Text>
+                </View>
+              ) : (
+                <></>
+              )}
+              {part}
+            </View>
+          );
+
+          setStarted = true;
+        }
+
         columsThisPage++;
         rowsThisColumn = 0;
 
@@ -102,6 +98,25 @@ export default function SetlistSimplePDF({
       }
 
       if (!setStarted && set.length > rowsPerColumn - rowsThisColumn) {
+        const restRows = Math.min(rowsPerColumn - rowsThisColumn - 1, set.length - 4);
+
+        if (restRows > 4 && wrapping) {
+          // only break set if its at least 4 rows per part (plus title)
+          const part = set.slice(0, restRows);
+          set = set.slice(restRows);
+
+          pages[pages.length - 1].push(
+            <View
+              key={`settitle-${pages.length}-${columsThisPage}-${rowsThisColumn}-breakpart`}
+              style={styles.set}
+            >
+              {part}
+            </View>
+          );
+
+          setStarted = true;
+        }
+
         columsThisPage++;
         rowsThisColumn = 0;
 
@@ -113,10 +128,7 @@ export default function SetlistSimplePDF({
 
       if (set.length > 0) {
         pages[pages.length - 1].push(
-          <View
-            key={`settitle-${pages.length}-${columsThisPage}-${rowsThisColumn}`}
-            style={styles.set}
-          >
+          <View key={`settitle-${pages.length}-${columsThisPage}-${rowsThisColumn}`} style={styles.set}>
             {setStarted ? (
               <View>
                 <Text style={styles.setTitle}> </Text>
@@ -150,11 +162,7 @@ export default function SetlistSimplePDF({
   }
 
   return (
-    <Document
-      title={"Setlist " + concert}
-      creator={undefined}
-      producer={undefined}
-    >
+    <Document title={"Setlist " + concert} creator={undefined} producer={undefined}>
       {makeSetPages().map((p) => (
         <Page style={styles.page}>{p}</Page>
       ))}
