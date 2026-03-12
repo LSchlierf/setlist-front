@@ -3,7 +3,7 @@ import { Button } from "./ui/button";
 
 export default function FrontPageSplash() {
   return (
-    <div className="relative w-full flex-1 overflow-auto">
+    <div className="relative w-full flex-1 overflow-hidden">
       <div className="absolute -right-5 lg:right-23 top-10 h-48 flex flex-row">
         <div className="relative left-20 pt-12 w-70 h-full text-2xl font-bold">
           Click here to
