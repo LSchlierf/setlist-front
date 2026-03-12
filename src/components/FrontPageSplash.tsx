@@ -4,7 +4,7 @@ import { Button } from "./ui/button";
 export default function FrontPageSplash() {
   return (
     <div className="relative w-full flex-1 overflow-auto">
-      <div className="absolute right-23 top-10 h-48 flex flex-row">
+      <div className="absolute -right-5 lg:right-23 top-10 h-48 flex flex-row">
         <div className="relative left-20 pt-12 w-70 h-full text-2xl font-bold">
           Click here to
           <br />
@@ -14,11 +14,11 @@ export default function FrontPageSplash() {
         </div>
         <Arrow />
       </div>
-      <div className="absolute top-[55%] left-[50%] transform-(--center-transform) w-fit h-fit flex flex-col items-center gap-20">
-        <div className="text-9xl title-splash">SongRack</div>
-        <div className="text-2xl font-bold">Your New Setlist Helper</div>
+      <div className="absolute top-[55%] left-[50%] transform-(--center-transform) w-fit h-fit flex flex-col items-center gap-[4vw] lg:gap-20">
+        <div className="text-[10vw] lg:text-[8vw] title-splash">SongRack</div>
+        <div className="text-2xl font-bold z-1">Your New Setlist Helper</div>
       </div>
-      <div className="absolute right-23 bottom-10 flex flex-row gap-4 items-center">
+      <div className="absolute right-10 lg:right-23 bottom-10 flex flex-row gap-4 items-center">
         More Info:
         <a target="_blank" rel="noopener noreferer" href="https://GitHub.com/LSchlierf/SongRack">
           <Button>
