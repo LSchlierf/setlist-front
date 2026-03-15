@@ -1,7 +1,18 @@
 import { Link, useNavigate, useParams } from "react-router";
 import Header from "./components/Header";
-import { ArrowLeft, Check, FileDown, Import, Pen, PencilOff, Trash2, X } from "lucide-react";
-import { useEffect, useState, type DragEvent } from "react";
+import {
+  ArrowLeft,
+  ArrowLeftSquare,
+  Check,
+  ExternalLink,
+  FileDown,
+  Import,
+  Pen,
+  PencilOff,
+  Trash2,
+  X,
+} from "lucide-react";
+import { useEffect, useRef, useState, type DragEvent } from "react";
 import storage from "./lib/storage";
 import { type category, type setlist, type setlistTimeDTO, type setSpot, type song } from "./types";
 import RepertoireTable from "./components/RepertoireTable";
@@ -15,13 +26,21 @@ import DurationInput from "./components/DurationInput";
 import { Checkbox } from "./components/ui/checkbox";
 import SetlistExportCard from "./components/SetlistExportCard";
 import { ColorsGradient, getEncore, getPartitionedSets } from "./lib/utils";
+import { Tooltip, TooltipContent, TooltipTrigger } from "./components/ui/tooltip";
+import { useCrossTabState } from "./lib/hooks";
 
 export default function EditSetlist() {
   const { id } = useParams();
   const navigate = useNavigate();
 
-  const [setlist, setSetlist] = useState<setlist | undefined>();
-  const [categories, setCategories] = useState<category[] | undefined>(undefined);
+  let role: "main" | "repertoire" = "main";
+
+  for (const p of new URLSearchParams(window.location.search)) {
+    if (p[0] === "role" && p[1] === "repertoire") role = p[1];
+  }
+
+  const [setlist, setSetlist] = useCrossTabState<setlist | undefined>(`${id}-setlistObject`, undefined);
+  const [categories, setCategories] = useCrossTabState<category[] | undefined>(`${id}-categories`, undefined);
   const [songs, setSongs] = useState<Map<string, song> | undefined>(undefined);
   const [filter, setFilter] = useState<string>("");
   const [editingName, setEditingName] = useState<boolean>(false);
@@ -33,10 +52,18 @@ export default function EditSetlist() {
   const [breakLen, setBreakLen] = useState<number>(20);
   const [breakBuf, setBreakBuf] = useState<number>(5);
   const [exportDialogOpen, setExportDialogOpen] = useState<boolean>(false);
-  const [draggingId, setDraggingId] = useState<string | undefined>(undefined);
-  const [draggingSpot, setDraggingSpot] = useState<setSpot | undefined>(undefined);
-  const [draggingFrom, setDraggingFrom] = useState<string | undefined>(undefined);
+  const [draggingId, setDraggingId] = useCrossTabState<string | undefined>(`${id}-draggingSongId`, undefined);
+  const [draggingSpot, setDraggingSpot] = useCrossTabState<setSpot | undefined>(
+    `${id}-draggingSetSpot`,
+    undefined
+  );
+  const [draggingFrom, setDraggingFrom] = useCrossTabState<string | undefined>(
+    `${id}-draggingFrom`,
+    undefined
+  );
   const [newSetSongId, setNewSetSongId] = useState<string | undefined>(undefined);
+  const [repertoirePoppedOut, setRepertoirePoppedOut] = useState<boolean>(false);
+  const poppedOutRepertoire = useRef<Window | null>(null);
 
   const backToMainPage = () => {
     navigate("/");
@@ -174,6 +201,7 @@ export default function EditSetlist() {
     });
 
     return () => {
+      cleanupExternalWindow();
       storage.getSetlistSocket(id)?.off("setlist", refetchUserData);
       storage.getSetlistSocket(id)?.off("setlist:categoryVisibility", handleCategoryVisibilityUpdate);
       storage.getSetlistSocket(id)?.off("setlist:timeUpdate", handleTimeUpdate);
@@ -187,6 +215,10 @@ export default function EditSetlist() {
       storage.getSetlistSocket(id)?.off("setlist:updateName", handleNameUpdate);
     };
   }, []);
+
+  const cleanupExternalWindow = () => {
+    poppedOutRepertoire.current?.close();
+  };
 
   useEffect(() => {
     if (setlist) {
@@ -457,19 +489,26 @@ export default function EditSetlist() {
       return;
     }
 
-    if (draggingFrom === "repertoire") {
-      createSpot({
-        ...newSpot!,
-        dummy: undefined,
-      });
-      return;
-    }
+    if (role === "repertoire") {
+      if (to === "repertoire") {
+        opener.removeSpot(draggingSpot!);
+        return;
+      }
+    } else {
+      if (draggingFrom === "repertoire") {
+        createSpot({
+          ...newSpot!,
+          dummy: undefined,
+        });
+        return;
+      }
 
-    if (to === "repertoire") {
-      removeSpot(draggingSpot!);
-      return;
+      if (to === "repertoire") {
+        removeSpot(draggingSpot!);
+        return;
+      }
+      updateSpot({ ...newSpot!, dummy: undefined }, draggingSpot!);
     }
-    updateSpot({ ...newSpot!, dummy: undefined }, draggingSpot!);
   };
 
   const dragOverNew = (e: DragEvent<any>) => {
@@ -713,6 +752,21 @@ export default function EditSetlist() {
     </Card>
   );
 
+  const popoutRepertoireBank = () => {
+    if (role === "repertoire") {
+      window.close();
+    } else {
+      Window.prototype.removeSpot = removeSpot;
+      const w = window.open(`${window.location.href}?role=repertoire`, "secondary");
+      w?.addEventListener("beforeunload", () => {
+        setRepertoirePoppedOut(false);
+        poppedOutRepertoire.current = null;
+      });
+      poppedOutRepertoire.current = w;
+      setRepertoirePoppedOut(w !== null);
+    }
+  };
+
   const setlistBank = () => (
     <ResizablePanel defaultSize={"65%"}>
       <div className="p-4 px-5 lg:px-30 h-full w-screen overflow-scroll">
@@ -743,6 +797,20 @@ export default function EditSetlist() {
                   <Pen />
                 </Button>
               </>
+            )}
+            {repertoirePoppedOut && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    onClick={() => poppedOutRepertoire.current?.close()}
+                    className="border"
+                    variant={"secondary"}
+                  >
+                    <ArrowLeftSquare />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Move Repertoire Back Into Tab</TooltipContent>
+              </Tooltip>
             )}
           </h1>
           {setlist && getPartitionedSets(setlist.setSpots).map(setDisplay)}
@@ -840,14 +908,26 @@ export default function EditSetlist() {
     <ResizablePanel>
       <div className="bg-gray-900 h-full p-4 overflow-scroll">
         <div className="flex flex-col gap-6">
-          <div className="flex flex-row gap-3 items-center">
-            Filter songs:
-            <ButtonGroup>
-              <Input className="w-60" value={filter} onChange={(e) => setFilter(e.target.value)} />
-              <Button className="border" onClick={() => setFilter("")} variant={"secondary"}>
-                <X />
-              </Button>
-            </ButtonGroup>
+          <div className="flex flex-row justify-between">
+            <div className="flex flex-row gap-3 items-center">
+              Filter songs:
+              <ButtonGroup>
+                <Input className="w-60" value={filter} onChange={(e) => setFilter(e.target.value)} />
+                <Button className="border" onClick={() => setFilter("")} variant={"secondary"}>
+                  <X />
+                </Button>
+              </ButtonGroup>
+            </div>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button onClick={popoutRepertoireBank} className="border" variant={"secondary"}>
+                  {role === "repertoire" ? <ArrowLeftSquare /> : <ExternalLink />}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                {role === "repertoire" ? "Move Back to Main Tab" : "Open Repertoire in Separate Tab"}
+              </TooltipContent>
+            </Tooltip>
           </div>
           <RepertoireTable
             categories={
@@ -876,23 +956,33 @@ export default function EditSetlist() {
 
   return (
     <div className="h-screen flex flex-col w-screen bg-gray-950">
-      <Header
-        showUndoRedo
-        backButton={
-          <Link to="/" className="pr-4">
-            <ArrowLeft size={30} />
-          </Link>
-        }
-        onLogin={(loggedIn) => !loggedIn && backToMainPage()}
-      />
+      {role === "main" && (
+        <Header
+          showUndoRedo
+          backButton={
+            <Link to="/" className="pr-4">
+              <ArrowLeft size={30} />
+            </Link>
+          }
+          onLogin={(loggedIn) => !loggedIn && backToMainPage()}
+        />
+      )}
       <div className="flex-1 overflow-auto">
         <ResizablePanelGroup>
-          {setlistBank()}
-          <ResizableHandle withHandle />
-          {repertoireBank()}
+          {role === "repertoire" ? (
+            repertoireBank()
+          ) : repertoirePoppedOut ? (
+            setlistBank()
+          ) : (
+            <>
+              {setlistBank()}
+              <ResizableHandle withHandle />
+              {repertoireBank()}
+            </>
+          )}
         </ResizablePanelGroup>
       </div>
-      {exportDialogOpen && (
+      {role === "main" && exportDialogOpen && (
         <SetlistExportCard
           setlist={setlist!}
           categories={categories || []}
