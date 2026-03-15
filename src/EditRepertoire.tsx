@@ -1,6 +1,6 @@
 import { Link, useNavigate } from "react-router";
 import Header from "./components/Header";
-import { ArrowLeft, FolderInput, Palette, Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, FolderInput, Palette, Pen, Plus, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import storage from "./lib/storage";
 import { Button } from "./components/ui/button";
@@ -14,6 +14,7 @@ import CategoryColorCard from "./components/CategoryColorCard";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./components/ui/tooltip";
 import RepertoireTable from "./components/RepertoireTable";
 import { ColorsGradient } from "./lib/utils";
+import EditCategoryCard from "./components/EditCategoryCard";
 
 export default function EditRepertoire() {
   const navigate = useNavigate();
@@ -22,6 +23,7 @@ export default function EditRepertoire() {
   const [dialogOpen, setDialogOpen] = useState<boolean>(false);
   const [newCategoryDialogOpen, setNewCategoryDialogOpen] = useState<boolean>(false);
   const [colorCategory, setColorCategory] = useState<category | undefined>(undefined);
+  const [editingCategoryId, setEditingCategoryId] = useState<string | undefined>(undefined);
 
   const backToMainPage = () => {
     navigate("/");
@@ -252,13 +254,22 @@ export default function EditRepertoire() {
                 )}
               </ButtonGroup>
             </div>
-            <Button
-              className="w-full hover:bg-red-600/80 border"
-              variant={"secondary"}
-              onClick={() => deleteCategory(category)}
-            >
-              <Trash2 /> Delete
-            </Button>
+            <ButtonGroup className="w-full">
+              <Button
+                className="flex-1 border"
+                variant={"secondary"}
+                onClick={() => setEditingCategoryId(id)}
+              >
+                <Pen /> Edit
+              </Button>
+              <Button
+                className="flex-1 hover:bg-red-600/80 border"
+                variant={"secondary"}
+                onClick={() => deleteCategory(category)}
+              >
+                <Trash2 /> Delete
+              </Button>
+            </ButtonGroup>
           </div>
         </CardContent>
       </Card>
@@ -269,7 +280,7 @@ export default function EditRepertoire() {
     return (
       <Card
         onClick={() => setNewCategoryDialogOpen(true)}
-        className="w-full flex flex-col justify-center items-center border-dashed hover:bg-gray-800 hover:cursor-pointer"
+        className="w-full min-h-40 flex flex-col justify-center items-center border-dashed hover:bg-gray-800 hover:cursor-pointer"
       >
         <Plus />
       </Card>
@@ -319,6 +330,13 @@ export default function EditRepertoire() {
           category={colorCategory}
           onClose={() => setColorCategory(undefined)}
           onFinish={setColors}
+        />
+      )}
+      {!!editingCategoryId && (
+        <EditCategoryCard
+          category={categories?.find((c) => c.id === editingCategoryId)!}
+          onClose={() => setEditingCategoryId(undefined)}
+          onFinish={editCategory}
         />
       )}
     </div>
