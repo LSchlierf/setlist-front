@@ -1,3 +1,5 @@
+// SOURCE: https://javascript.plainenglish.io/a-react-hook-to-share-state-between-browser-windows-a672470f66ff
+
 import { useEffect, useState, useRef, type Dispatch, type SetStateAction } from "react";
 
 export function useCrossTabState<T>(stateKey: string, defaultValue: T): [T, Dispatch<SetStateAction<T>>] {
