@@ -161,7 +161,11 @@ export default function EditSetlist() {
     storage.getSongs().then((songs: song[]) => {
       const songMap = new Map(songs.map((song) => [song.id, song]));
       setSongs(songMap);
-      storage.getSetlist(id!).then((s: setlist) => {
+      storage.getSetlist(id!).then((s: setlist | undefined) => {
+        if (s === undefined) {
+          backToMainPage();
+          return;
+        }
         setSetlist(s);
         setBreakLen(s.breakLen);
         setBreakBuf(s.breakBuffer);
