@@ -99,7 +99,7 @@ export default function Header({
                 </Tooltip>
               </>
             )}
-            <button onClick={() => setLoginOpen((o) => !o)}>
+            <button className="hover:cursor-pointer" onClick={() => setLoginOpen((o) => !o)}>
               <CircleUserRoundIcon size={30} />
             </button>
           </div>
