@@ -36,7 +36,7 @@ export default function SetlistSimplePDF({ concert, sets, encore, wrapping }: Se
       </View>,
     ].concat(
       encore.map((song) => (
-        <View key={song.id} style={styles.setSong}>
+        <View key={`encore-${song.id}`} style={styles.setSong}>
           <Text style={styles.song}>{song.title}</Text>
         </View>
       ))
@@ -50,7 +50,7 @@ export default function SetlistSimplePDF({ concert, sets, encore, wrapping }: Se
           </View>,
         ].concat(
           set.map((song) => (
-            <View key={song.id} style={styles.setSong}>
+            <View key={`set-${i}-${song.id}`} style={styles.setSong}>
               <Text style={styles.song}>{song.title}</Text>
             </View>
           ))
@@ -64,8 +64,6 @@ export default function SetlistSimplePDF({ concert, sets, encore, wrapping }: Se
 
       while (set.length > rowsPerColumn || (setStarted && set.length > rowsPerColumn - rowsThisColumn - 1)) {
         const restRows = rowsPerColumn - rowsThisColumn - (setStarted ? 1 : 0);
-
-        console.log(restRows);
 
         if (restRows > 4 || wrapping) {
           // if wrapping disabled, only start sets if its at least 4 songs (plus title)
@@ -163,8 +161,10 @@ export default function SetlistSimplePDF({ concert, sets, encore, wrapping }: Se
 
   return (
     <Document title={"Setlist " + concert} creator={undefined} producer={undefined}>
-      {makeSetPages().map((p) => (
-        <Page style={styles.page}>{p}</Page>
+      {makeSetPages().map((p, i) => (
+        <Page key={`page-${i}`} style={styles.page}>
+          {p}
+        </Page>
       ))}
     </Document>
   );
