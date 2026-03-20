@@ -935,16 +935,10 @@ export default function EditSetlist() {
           </div>
           <RepertoireTable
             categories={
-              categories?.map((c) => {
-                const visible = setlist?.categoryVisibilities.find((v) => v.categoryId === c.id)?.visible;
-                if (visible !== undefined) {
-                  return {
-                    ...c,
-                    show: visible,
-                  };
-                }
-                return c;
-              }) || []
+              categories?.map((c) => ({
+                ...c,
+                show: getCategoryVisibility(c),
+              })) || []
             }
             filterTerm={filter}
             usedSongs={new Set(setlist?.setSpots.map((v) => v.songId))}
@@ -989,7 +983,12 @@ export default function EditSetlist() {
       {role === "main" && exportDialogOpen && (
         <SetlistExportCard
           setlist={setlist!}
-          categories={categories || []}
+          categories={
+            categories?.map((c) => ({
+              ...c,
+              show: getCategoryVisibility(c),
+            })) || []
+          }
           songs={songs || new Map()}
           onClose={() => setExportDialogOpen(false)}
           startTime={startTime || "19:00"}

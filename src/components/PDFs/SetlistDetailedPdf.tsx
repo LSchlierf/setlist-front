@@ -147,7 +147,7 @@ function SetlistDetailedPDF({
 
   function header() {
     return (
-      <View style={[styles.flexRow, styles.width100]} key={"header"}>
+      <View wrap={false} style={[styles.flexRow, styles.width100]} key={"header"}>
         <View style={styles.values}>
           <View style={[styles.cell, styles.title]}>
             <Text style={styles.headerTextBold}>{concert}</Text>
@@ -271,6 +271,7 @@ function SetlistDetailedPDF({
   function encoreBlock() {
     return (
       <View
+        wrap={false}
         key={"encoreBlock"}
         style={[
           styles.flexRow,
@@ -303,7 +304,7 @@ function SetlistDetailedPDF({
 
   function infoFooter() {
     return (
-      <View key={"infoFooter"}>
+      <View wrap={false} key={"infoFooter"}>
         <View style={[styles.flexRow, styles.width100]}>
           <View style={[styles.values, styles.flexRow, styles.justifyEnd]}>
             <View style={[styles.flexRow, styles.justifyEnd]}>
